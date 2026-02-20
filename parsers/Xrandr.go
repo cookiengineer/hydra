@@ -1,134 +1,80 @@
 package parsers
 
-import (
-	"bufio"
-	"errors"
-	"os/exec"
-	"strconv"
-	"strings"
-
-	"github.com/cookiengineer/hydra/types"
-)
+// import "errors"
+import "fmt"
+import "os/exec"
+import "regexp"
+import "strconv"
+import "strings"
+import "github.com/cookiengineer/hydra/types"
 
 func Xrandr() (*types.Screen, error) {
 
 	cmd := exec.Command("xrandr", "--query")
+	buffer, err0 := cmd.Output()
 
-	output, err := cmd.Output()
+	if err0 == nil {
 
-	if err != nil {
-		return nil, err
-	}
+		lines := strings.Split(strings.TrimSpace(string(buffer)), "\n")
+		screen := &types.Screen{}
 
-	screen := &types.Screen{}
+		for _, line := range lines {
 
-	var currentMonitor *types.Monitor
+			if strings.HasPrefix(line, "Screen ") && strings.Contains(line, ": ") && strings.Contains(line, " current ") {
 
-	scanner := bufio.NewScanner(strings.NewReader(string(output)))
+				pattern := regexp.MustCompile(`current\s+([0-9]+)\s+x\s+([0-9]+)`)
+				matches := pattern.FindStringSubmatch(line)
 
-	for scanner.Scan() {
+				if len(matches) == 3 {
 
-		line := scanner.Text()
+					width,  err1 := strconv.Atoi(matches[1])
+					height, err2 := strconv.Atoi(matches[2])
 
-		// Parse global virtual screen size
-		// Example:
-		// Screen 0: minimum 8 x 8, current 3840 x 1080, maximum 32767 x 32767
-		if strings.HasPrefix(line, "Screen ") {
-
-			parts := strings.Split(line, "current")
-
-			if len(parts) > 1 {
-
-				right := strings.TrimSpace(parts[1])
-				right = strings.Split(right, ",")[0]
-				dims := strings.Split(strings.TrimSpace(right), " x ")
-
-				if len(dims) == 2 {
-					w, _ := strconv.Atoi(strings.TrimSpace(dims[0]))
-					h, _ := strconv.Atoi(strings.TrimSpace(dims[1]))
-					screen.Width = w
-					screen.Height = h
-				}
-			}
-			continue
-		}
-
-		// Parse connected monitors
-		// Example:
-		// HDMI-1 connected primary 1920x1080+0+0 ...
-		if strings.Contains(line, " connected") {
-
-			fields := strings.Fields(line)
-
-			if len(fields) < 3 {
-				continue
-			}
-
-			monitor := types.Monitor{
-				Output:    fields[0],
-				Connected: true,
-			}
-
-			for _, f := range fields {
-
-				// resolution+offset pattern 1920x1080+0+0
-				if strings.Contains(f, "x") && strings.Contains(f, "+") {
-
-					resOffset := strings.Split(f, "+")
-					if len(resOffset) >= 3 {
-
-						monitor.Resolution = resOffset[0]
-
-						dims := strings.Split(resOffset[0], "x")
-						if len(dims) == 2 {
-							monitor.Width, _ = strconv.Atoi(dims[0])
-							monitor.Height, _ = strconv.Atoi(dims[1])
-						}
-
-						monitor.OffsetX, _ = strconv.Atoi(resOffset[1])
-						monitor.OffsetY, _ = strconv.Atoi(resOffset[2])
-					}
-				}
-			}
-
-			screen.Monitors = append(screen.Monitors, monitor)
-			currentMonitor = &screen.Monitors[len(screen.Monitors)-1]
-
-			continue
-		}
-
-		// Parse modes (must belong to last connected monitor)
-		// Example:
-		//   1920x1080     60.00*+  59.94
-		if currentMonitor != nil {
-
-			trimmed := strings.TrimSpace(line)
-
-			if strings.Contains(trimmed, "x") {
-
-				fields := strings.Fields(trimmed)
-				if len(fields) >= 2 {
-
-					mode := types.MonitorMode{
-						Resolution: fields[0],
+					if err1 == nil && err2 == nil {
+						screen.Width  = width
+						screen.Height = height
 					}
 
-					refreshStr := fields[1]
-					refreshStr = strings.TrimRight(refreshStr, "*+")
-					refresh, err := strconv.ParseFloat(refreshStr, 32)
-					if err == nil {
-						mode.RefreshRate = float32(refresh)
+				}
+
+			} else if strings.Contains(line, " connected ") {
+
+				pattern := regexp.MustCompile(`^(\S+)\s+connected(?:\s+primary)?\s+(\d+)x(\d+)\+(\d+)\+(\d+)`)
+				matches := pattern.FindStringSubmatch(line)
+
+				if len(matches) == 6 {
+
+					width,    err1 := strconv.Atoi(matches[2])
+					height,   err2 := strconv.Atoi(matches[3])
+					offset_x, err3 := strconv.Atoi(matches[4])
+					offset_y, err4 := strconv.Atoi(matches[5])
+
+					if err1 == nil && err2 == nil && err3 == nil && err4 == nil {
+
+						screen.Monitors = append(screen.Monitors, types.Monitor{
+							Output:     matches[1],
+							Connected:  true,
+							Resolution: fmt.Sprintf("%dx%d", width, height),
+							Width:      width,
+							Height:     height,
+							OffsetX:    offset_x,
+							OffsetY:    offset_y,
+						})
+
 					}
 
-					currentMonitor.Modes = append(currentMonitor.Modes, mode)
 				}
+
 			}
+
 		}
+
+		return screen, nil
+
+	} else if err0 != nil {
+		return nil, err0
+	} else {
+		return nil, nil
 	}
 
-	if screen.Width == 0 || screen.Height == 0 {
-		return nil, errors.New("could not parse xrandr screen size")
-	}
-
-	return screen, nil
 }
