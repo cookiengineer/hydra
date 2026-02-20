@@ -16,6 +16,7 @@ import "github.com/cookiengineer/hydra/types"
 type GlobalState struct {
 	sync.Mutex
 	Host          types.Machine   `json:"host"`
+	Active        *types.Machine  `json:"active"`
 	Machines      []types.Machine `json:"machines"`
 	VirtualScreen types.Screen    `json:"virtual_screen"`
 }
@@ -54,6 +55,7 @@ func Listen(host string) error {
 		global_state := &GlobalState{
 			Host:     host_machine,
 			Machines: make([]types.Machine, 0),
+			Active:   nil,
 		}
 
 		global_state.VirtualScreen = math.ComputeVirtualScreen(global_state.Host, global_state.Machines)
@@ -125,12 +127,60 @@ func Listen(host string) error {
 
 			for {
 				select {
-				case event := <-state.MouseEvents:
+				case <-state.MouseEvents:
 
-					data, _ := json.Marshal(event)
-					fmt.Printf("Mouse: %+v\n", string(data))
+					x, y, err := state.QueryPointer()
 
-					// TODO: send to correct client
+					if err == nil {
+
+						global_state.Lock()
+
+						hostWidth := global_state.Host.Screen.Width
+						hostHeight := global_state.Host.Screen.Height
+
+						// Only evaluate boundary switching if no remote is active
+						if global_state.Active == nil {
+
+							var target *types.Machine
+
+							if x <= 0 {
+								for i := range global_state.Machines {
+									if global_state.Machines[i].Position == "left-of" {
+										target = &global_state.Machines[i]
+										break
+									}
+								}
+							} else if x >= hostWidth-1 {
+								for i := range global_state.Machines {
+									if global_state.Machines[i].Position == "right-of" {
+										target = &global_state.Machines[i]
+										break
+									}
+								}
+							} else if y <= 0 {
+								for i := range global_state.Machines {
+									if global_state.Machines[i].Position == "above" {
+										target = &global_state.Machines[i]
+										break
+									}
+								}
+							} else if y >= hostHeight-1 {
+								for i := range global_state.Machines {
+									if global_state.Machines[i].Position == "below" {
+										target = &global_state.Machines[i]
+										break
+									}
+								}
+							}
+
+							if target != nil {
+								global_state.Active = target
+								fmt.Printf("Activated remote machine: %s (%s)\n", target.Hostname, target.Position)
+							}
+						}
+
+						global_state.Unlock()
+					}
 
 				case event  := <-state.KeyboardEvents:
 
