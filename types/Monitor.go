@@ -8,5 +8,4 @@ type Monitor struct {
 	Height     int           `json:"height"`
 	OffsetX    int           `json:"offset_x"`
 	OffsetY    int           `json:"offset_y"`
-	Modes      []MonitorMode `json:"modes"`
 }
