@@ -8,6 +8,7 @@ import "os"
 import "os/signal"
 import "sync"
 import "syscall"
+import "github.com/cookiengineer/hydra/handlers"
 import "github.com/cookiengineer/hydra/listeners"
 import "github.com/cookiengineer/hydra/math"
 import "github.com/cookiengineer/hydra/parsers"
@@ -72,25 +73,7 @@ func Listen(host string) error {
 
 		})
 
-		http.HandleFunc("/connect", func(response http.ResponseWriter, request *http.Request) {
-
-			var machine types.Machine
-
-			json.NewDecoder(request.Body).Decode(&machine)
-
-			// TODO: Error handling
-			fmt.Println("/connect from %s: %v", machine.Hostname, machine)
-
-			global_state.Lock()
-
-			global_state.Machines = append(global_state.Machines, machine)
-			global_state.VirtualScreen = math.ComputeVirtualScreen(global_state.Host, global_state.Machines)
-
-			response.WriteHeader(http.StatusOK)
-
-			global_state.Unlock()
-
-		})
+		http.HandleFunc("/connect", handlers.OnConnect(global_state))
 
 		http.HandleFunc("/disconnect", func(response http.ResponseWriter, request *http.Request) {
 
@@ -176,13 +159,56 @@ func Listen(host string) error {
 							if target != nil {
 								global_state.Active = target
 								fmt.Printf("Activated remote machine: %s (%s)\n", target.Hostname, target.Position)
+
+								// Warp pointer slightly back inside host bounds
+								if target.Position == "left-of" {
+									state.WarpPointer(1, y)
+								} else if target.Position == "right-of" {
+									state.WarpPointer(hostWidth-2, y)
+								} else if target.Position == "above" {
+									state.WarpPointer(x, 1)
+								} else if target.Position == "below" {
+									state.WarpPointer(x, hostHeight-2)
+								}
 							}
+
+						} else {
+
+							// Forward the event to active machine via long-lived socket
+							if global_state.Active.Socket != nil {
+								evJSON, _ := json.Marshal(event)
+								select {
+								case global_state.Active.Socket <- evJSON:
+								default:
+									// channel full, drop event to avoid blocking
+								}
+							}
+
 						}
 
 						global_state.Unlock()
+
 					}
 
+					// Optional: always log locally
+					data, _ := json.Marshal(event)
+					fmt.Printf("Mouse: %+v\n", string(data))
+
 				case event  := <-state.KeyboardEvents:
+
+
+					global_state.Lock()
+
+					if global_state.Active != nil && global_state.Active.Socket != nil {
+						evJSON, _ := json.Marshal(event)
+						select {
+						case global_state.Active.Socket <- evJSON:
+						default:
+							// drop if channel full
+						}
+					}
+
+					global_state.Unlock()
 
 					data, _ := json.Marshal(event)
 					fmt.Printf("Key: %+v\n", string(data))
