@@ -11,13 +11,15 @@ package types
 */
 import "C"
 
+import "errors"
+
 type State struct {
-	Display        *C.Display
+	Display       *C.Display
 	XIOpcode       C.int
-	XWindow        C.Window
+	Window         C.Window
 	MouseEvents    chan MouseEvent
 	KeyboardEvents chan KeyboardEvent
-	VirtualScreen  *VirtualScreen
+	VirtualScreen  *Screen
 	running        bool
 }
 
@@ -68,4 +70,3 @@ func (state *State) QueryPointer() (int, int, error) {
 
 }
 
-// TODO: Continue Here

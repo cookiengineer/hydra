@@ -14,14 +14,6 @@ import "github.com/cookiengineer/hydra/math"
 import "github.com/cookiengineer/hydra/parsers"
 import "github.com/cookiengineer/hydra/types"
 
-type GlobalState struct {
-	sync.Mutex
-	Host          types.Machine   `json:"host"`
-	Active        *types.Machine  `json:"active"`
-	Machines      []types.Machine `json:"machines"`
-	VirtualScreen types.Screen    `json:"virtual_screen"`
-}
-
 func Listen(host string) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -46,18 +38,12 @@ func Listen(host string) error {
 
 	if err0 == nil && err1 == nil {
 
-		host_machine := types.Machine{
+		global_state := types.NewGlobalState(types.Machine{
 			Hostname: host,
 			IP:       "", // populated later
 			Position: "host",
 			Screen:   *screen,
-		}
-
-		global_state := &GlobalState{
-			Host:     host_machine,
-			Machines: make([]types.Machine, 0),
-			Active:   nil,
-		}
+		})
 
 		global_state.VirtualScreen = math.ComputeVirtualScreen(global_state.Host, global_state.Machines)
 

@@ -95,7 +95,9 @@ func ComputeVirtualScreen(host types.Machine, machines []types.Machine) types.Sc
 			}
 
 			virtual.Monitors = append(virtual.Monitors, monitor)
+
 		}
+
 	}
 
 	return virtual
