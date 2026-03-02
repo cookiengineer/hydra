@@ -1,6 +1,11 @@
 package receivers
 
-// TODO: import C/CGo libraries
+/*
+#cgo CFLAGS: -I/usr/include
+#cgo LDFLAGS: -lX11 -lXi
+#include <X11/Xlib.h>
+*/
+import "C"
 
 import "errors"
 import "github.com/cookiengineer/hydra/types"

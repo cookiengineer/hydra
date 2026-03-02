@@ -1,10 +1,8 @@
-package math
+package types
 
-import "github.com/cookiengineer/hydra/types"
+func computeVirtualScreen(host Machine, machines []Machine) *Screen {
 
-func ComputeVirtualScreen(host types.Machine, machines []types.Machine) types.Screen {
-
-	virtual := types.Screen{}
+	screen := Screen{}
 
 	// Start with host dimensions
 	hostWidth := host.Screen.Width
@@ -48,8 +46,8 @@ func ComputeVirtualScreen(host types.Machine, machines []types.Machine) types.Sc
 		}
 	}
 
-	virtual.Width = maxX - minX
-	virtual.Height = maxY - minY
+	screen.Width = maxX - minX
+	screen.Height = maxY - minY
 
 	// Recompute monitor offsets into unified coordinate space
 
@@ -63,7 +61,8 @@ func ComputeVirtualScreen(host types.Machine, machines []types.Machine) types.Sc
 		monitor.OffsetX += offsetXShift
 		monitor.OffsetY += offsetYShift
 
-		virtual.Monitors = append(virtual.Monitors, monitor)
+		screen.Monitors = append(screen.Monitors, monitor)
+
 	}
 
 	// Remote monitors
@@ -94,11 +93,12 @@ func ComputeVirtualScreen(host types.Machine, machines []types.Machine) types.Sc
 				monitor.OffsetY += currentTopY - machine.Screen.Height + offsetYShift
 			}
 
-			virtual.Monitors = append(virtual.Monitors, monitor)
+			screen.Monitors = append(screen.Monitors, monitor)
 
 		}
 
 	}
 
-	return virtual
+	return &screen
+
 }

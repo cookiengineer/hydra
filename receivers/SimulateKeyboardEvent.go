@@ -6,9 +6,9 @@ func SimulateKeyboardEvent(state *types.State, event *types.KeyboardEvent) {
 
 	switch event.Type {
 	case types.KeyPress:
-		SimulateKeyPress(state, event.Key)
+		SimulateKeyPress(state, event.Keycode)
 	case types.KeyRelease:
-		SimulateKeyRelease(state, event.Key)
+		SimulateKeyRelease(state, event.Keycode)
 	}
 
 }

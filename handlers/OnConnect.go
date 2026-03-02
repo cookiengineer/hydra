@@ -1,13 +1,9 @@
 package server
 
-import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
-
-	"github.com/cookiengineer/hydra/types"
-)
+import "fmt"
+import "net/http"
+import "time"
+import "github.com/cookiengineer/hydra/types"
 
 // OnConnect is the HTTP handler for new client connections.
 // Keeps a long-lived line-based JSON socket in Machine.Socket.

@@ -5,11 +5,11 @@ package receivers
 import "errors"
 import "github.com/cookiengineer/hydra/types"
 
-func SimulateMousePress(state *types.State, button int) error {
+func SimulateMousePress(state *types.State, button types.MouseEventButton) error {
 
 	if state.XDisplay != nil {
 
-		C.XTestFakeButtonEvent(state.XDisplay, C.uint(button), 1, 0)
+		C.XTestFakeButtonEvent(state.XDisplay, C.uint(uint(button)), 1, 0)
 		C.XFlush(state.XDisplay)
 
 		return nil

@@ -10,7 +10,6 @@ import "sync"
 import "syscall"
 import "github.com/cookiengineer/hydra/handlers"
 import "github.com/cookiengineer/hydra/listeners"
-import "github.com/cookiengineer/hydra/math"
 import "github.com/cookiengineer/hydra/parsers"
 import "github.com/cookiengineer/hydra/types"
 
@@ -45,8 +44,6 @@ func Listen(host string) error {
 			Screen:   *screen,
 		})
 
-		global_state.VirtualScreen = math.ComputeVirtualScreen(global_state.Host, global_state.Machines)
-
 		http.HandleFunc("/state", func(response http.ResponseWriter, request *http.Request) {
 
 			global_state.Lock()
@@ -80,7 +77,7 @@ func Listen(host string) error {
 
 			}
 
-			global_state.VirtualScreen = math.ComputeVirtualScreen(global_state.Host, global_state.Machines)
+			global_state.ComputeVirtualScreen()
 
 			response.WriteHeader(http.StatusOK)
 

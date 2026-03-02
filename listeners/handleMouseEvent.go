@@ -31,8 +31,8 @@ func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
 			} else {
 				state.MouseEvents <- types.MouseEvent{
 					Type: types.MouseMove,
-					DX:   values[0],
-					DY:   values[1],
+					DX:   int(math.Round(values[0])),
+					DY:   int(math.Round(values[1])),
 				}
 			}
 
