@@ -1,104 +1,143 @@
 package types
 
-func computeVirtualScreen(host Machine, machines []Machine) *Screen {
+func computeVirtualScreen(controller string, machines map[string]*Machine) *Screen {
 
-	screen := Screen{}
+	virtual_min_x := 0
+	virtual_min_y := 0
+	virtual_max_x := 0
+	virtual_max_y := 0
 
-	// Start with host dimensions
-	hostWidth := host.Screen.Width
-	hostHeight := host.Screen.Height
+	controller_machine, ok := machines[controller]
 
-	minX := 0
-	minY := 0
-	maxX := hostWidth
-	maxY := hostHeight
+	if ok == true {
+
+		virtual_min_x = controller_machine.Screen.OffsetX
+		virtual_min_y = controller_machine.Screen.OffsetY
+		virtual_max_x = controller_machine.Screen.OffsetX + controller_machine.Screen.Width
+		virtual_max_y = controller_machine.Screen.OffsetY + controller_machine.Screen.Height
+
+	}
+
+
+	left_to_right := make([]*Machine, 0)
+	top_to_bottom := make([]*Machine, 0)
 
 	for _, machine := range machines {
-
-		w := machine.Screen.Width
-		h := machine.Screen.Height
 
 		switch machine.Position {
+		case "left-of":
+
+			left_to_right = make([]*Machine, 0)
+			left_to_right = append(left_to_right, machine)
+			left_to_right = append(left_to_right, left_to_right...)
 
 		case "right-of":
-			maxX += w
-			if h > maxY {
-				maxY = h
+
+			left_to_right = append(left_to_right, machine)
+
+		case "center":
+
+			left  := make([]*Machine, 0)
+			right := make([]*Machine, 0)
+
+			for _, other := range left_to_right {
+
+				if other.Position == "left-of" {
+					left = append(left, other)
+				} else if other.Position == "right-of" {
+					right = append(right, other)
+				}
+
 			}
 
-		case "left-of":
-			minX -= w
-			if h > maxY {
-				maxY = h
-			}
+			left_to_right = make([]*Machine, 0)
+			left_to_right = append(left_to_right, left...)
+			left_to_right = append(left_to_right, machine)
+			left_to_right = append(left_to_right, right...)
 
-		case "below":
-			maxY += h
-			if w > maxX {
-				maxX = w
-			}
-
-		case "above":
-			minY -= h
-			if w > maxX {
-				maxX = w
-			}
 		}
-	}
-
-	screen.Width = maxX - minX
-	screen.Height = maxY - minY
-
-	// Recompute monitor offsets into unified coordinate space
-
-	offsetXShift := -minX
-	offsetYShift := -minY
-
-	// Host monitors
-	for _, m := range host.Screen.Monitors {
-
-		monitor := m
-		monitor.OffsetX += offsetXShift
-		monitor.OffsetY += offsetYShift
-
-		screen.Monitors = append(screen.Monitors, monitor)
 
 	}
-
-	// Remote monitors
-	currentRightX := hostWidth
-	currentLeftX := 0
-	currentTopY := 0
-	currentBottomY := hostHeight
 
 	for _, machine := range machines {
 
-		for _, m := range machine.Screen.Monitors {
+		switch machine.Position {
+		case "above":
 
-			monitor := m
+			top_to_bottom = make([]*Machine, 0)
+			top_to_bottom = append(top_to_bottom, machine)
+			top_to_bottom = append(top_to_bottom, top_to_bottom...)
 
-			switch machine.Position {
+		case "below":
 
-			case "right-of":
-				monitor.OffsetX += currentRightX + offsetXShift
-				monitor.OffsetY += offsetYShift
-			case "left-of":
-				monitor.OffsetX += currentLeftX - machine.Screen.Width + offsetXShift
-				monitor.OffsetY += offsetYShift
-			case "below":
-				monitor.OffsetX += offsetXShift
-				monitor.OffsetY += currentBottomY + offsetYShift
-			case "above":
-				monitor.OffsetX += offsetXShift
-				monitor.OffsetY += currentTopY - machine.Screen.Height + offsetYShift
+			top_to_bottom = append(top_to_bottom, machine)
+
+		case "center":
+
+			above := make([]*Machine, 0)
+			below := make([]*Machine, 0)
+
+			for _, other := range top_to_bottom {
+
+				if other.Position == "above" {
+					above = append(above, other)
+				} else if other.Position == "below" {
+					below = append(below, other)
+				}
+
 			}
 
-			screen.Monitors = append(screen.Monitors, monitor)
+			top_to_bottom = make([]*Machine, 0)
+			top_to_bottom = append(top_to_bottom, above...)
+			top_to_bottom = append(top_to_bottom, machine)
+			top_to_bottom = append(top_to_bottom, below...)
 
 		}
 
 	}
 
-	return &screen
+	relative_offset_x := 0
+	relative_offset_y := 0
+
+	for _, machine := range left_to_right {
+
+		machine.Screen.OffsetX = relative_offset_x
+
+		if machine.Screen.OffsetX + machine.Screen.Width > virtual_max_x {
+			virtual_max_x = machine.Screen.OffsetX + machine.Screen.Width
+		}
+
+		if machine.Screen.Height > virtual_max_y {
+			virtual_max_y = machine.Screen.Height
+		}
+
+		relative_offset_x += machine.Screen.Width
+
+	}
+
+	for _, machine := range top_to_bottom {
+
+		machine.Screen.OffsetY = relative_offset_y
+
+		if machine.Screen.OffsetY + machine.Screen.Height > virtual_max_y {
+			virtual_max_y = machine.Screen.OffsetY + machine.Screen.Height
+		}
+
+		if machine.Screen.Width > virtual_max_x {
+			virtual_max_x = machine.Screen.Width
+		}
+
+		relative_offset_y += machine.Screen.Height
+
+	}
+
+
+	return &Screen{
+		Width:    virtual_max_x,
+		Height:   virtual_max_y,
+		Monitors: []Monitor{},
+		OffsetX:  virtual_min_x,
+		OffsetY:  virtual_min_y,
+	}
 
 }

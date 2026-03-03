@@ -19,7 +19,7 @@ type State struct {
 	Window         C.Window
 	MouseEvents    chan MouseEvent
 	KeyboardEvents chan KeyboardEvent
-	VirtualScreen  *Screen
+	Screen         *Screen
 	running        bool
 }
 

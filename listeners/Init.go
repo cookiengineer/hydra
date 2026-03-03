@@ -83,9 +83,9 @@ func Init(display string) (*State, error) {
 	C.register_xinput_events(x_display, x_root_window)
 
 	return &State{
-		XDisplay:       x_display,
-		XIOpcode:       xi_opcode,
-		XWindow:        x_root_window,
+		Display:       x_display,
+		XIOpcode:      xi_opcode,
+		Window:        x_root_window,
 		MouseEvents:    make(chan types.MouseEvent, 32),
 		KeyboardEvents: make(chan types.KeyboardEvent, 32),
 	}, nil

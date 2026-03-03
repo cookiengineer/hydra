@@ -18,9 +18,9 @@ func SimulateMouseMove(state *types.State, x int, y int) error {
 		dest_x := C.int(x)
 		dest_y := C.int(y)
 
-		if state.VirtualScreen != nil && state.VirtualScreen.Active != nil {
-			offset_x := state.VirtualScreen.Active.OffsetX
-			offset_y := state.VirtualScreen.Active.OffsetY
+		if state.Screen != nil {
+			offset_x := state.Screen.OffsetX
+			offset_y := state.Screen.OffsetY
 			dest_x = C.int(x - offset_x)
 			dest_y = C.int(y - offset_y)
 		}

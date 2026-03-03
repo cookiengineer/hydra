@@ -40,7 +40,7 @@ func Listen(host string) error {
 		global_state := types.NewGlobalState(types.Machine{
 			Hostname: host,
 			IP:       "", // populated later
-			Position: "host",
+			Position: "center",
 			Screen:   *screen,
 		})
 
