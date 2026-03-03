@@ -13,15 +13,15 @@ import "github.com/cookiengineer/hydra/types"
 
 func SimulateKeyPress(state *types.State, keycode uint32) error {
 
-	if state.XDisplay != nil {
+	if state.Display != nil {
 
-		C.XTestFakeKeyEvent(state.XDisplay, C.uint(keycode), 1, 0)
-		C.XFlush(state.XDisplay)
+		C.XTestFakeKeyEvent(state.Display, C.uint(keycode), 1, 0)
+		C.XFlush(state.Display)
 
 		return nil
 
 	} else {
-		return errors.New("XDisplay is nil")
+		return errors.New("Display is nil")
 	}
 
 }

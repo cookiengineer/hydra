@@ -7,15 +7,15 @@ import "github.com/cookiengineer/hydra/types"
 
 func SimulateMouseRelease(state *types.State, button int) error {
 
-	if state.XDisplay != nil {
+	if state.Display != nil {
 
-		C.XTestFakeButtonEvent(state.XDisplay, C.uint(button), 0, 0)
-		C.XFlush(state.XDisplay)
+		C.XTestFakeButtonEvent(state.Display, C.uint(button), 0, 0)
+		C.XFlush(state.Display)
 
 		return nil
 
 	} else {
-		return errors.New("XDisplay is nil")
+		return errors.New("Display is nil")
 	}
 
 }
