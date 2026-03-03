@@ -8,8 +8,8 @@ import "os"
 import "os/signal"
 import "sync"
 import "syscall"
+import "github.com/cookiengineer/hydra/adapters/xorg"
 import "github.com/cookiengineer/hydra/handlers"
-import "github.com/cookiengineer/hydra/listeners"
 import "github.com/cookiengineer/hydra/parsers"
 import "github.com/cookiengineer/hydra/types"
 
@@ -32,7 +32,7 @@ func Listen(host string) error {
 
 	}()
 
-	state, err0 := listeners.Init(":0")
+	bridge, err0 := xorg.NewBridge(":0")
 	screen, err1 := parsers.Xrandr()
 
 	if err0 == nil && err1 == nil {
@@ -87,15 +87,15 @@ func Listen(host string) error {
 
 		go http.ListenAndServe(":3000", nil)
 
-		go listeners.StartLoop(state)
+		go bridge.Init()
 
 		go func() {
 
 			for {
 				select {
-				case <-state.MouseEvents:
+				case <-bridge.MouseEvents:
 
-					x, y, err := state.QueryPointer()
+					x, y, err := bridge.QueryPointer()
 
 					if err == nil {
 
@@ -145,13 +145,13 @@ func Listen(host string) error {
 
 								// Warp pointer slightly back inside host bounds
 								if target.Position == "left-of" {
-									state.WarpPointer(1, y)
+									bridge.WarpPointer(1, y)
 								} else if target.Position == "right-of" {
-									state.WarpPointer(hostWidth-2, y)
+									bridge.WarpPointer(hostWidth-2, y)
 								} else if target.Position == "above" {
-									state.WarpPointer(x, 1)
+									bridge.WarpPointer(x, 1)
 								} else if target.Position == "below" {
-									state.WarpPointer(x, hostHeight-2)
+									bridge.WarpPointer(x, hostHeight-2)
 								}
 							}
 
@@ -177,7 +177,7 @@ func Listen(host string) error {
 					data, _ := json.Marshal(event)
 					fmt.Printf("Mouse: %+v\n", string(data))
 
-				case event  := <-state.KeyboardEvents:
+				case event  := <-bridge.KeyboardEvents:
 
 
 					global_state.Lock()
@@ -212,7 +212,7 @@ func Listen(host string) error {
 
 		fmt.Println("Shutting down...")
 
-		state.Destroy()
+		bridge.Destroy()
 
 		return nil
 

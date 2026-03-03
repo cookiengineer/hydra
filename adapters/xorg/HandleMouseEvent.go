@@ -1,4 +1,4 @@
-package listeners
+package xorg
 
 /*
 #cgo CFLAGS: -I/usr/include
@@ -12,7 +12,7 @@ import "math"
 import "unsafe"
 import "github.com/cookiengineer/hydra/types"
 
-func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
+func HandleMouseEvent(bridge *Bridge, cookie *C.XGenericEventCookie) {
 
 	switch cookie.evtype {
 
@@ -29,7 +29,7 @@ func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
 				// Ignore Xinput fake motion event which has dx set to scroll distance
 
 			} else {
-				state.MouseEvents <- types.MouseEvent{
+				bridge.MouseEvents <- types.MouseEvent{
 					Type: types.MouseMove,
 					DX:   int(math.Round(values[0])),
 					DY:   int(math.Round(values[1])),
@@ -45,7 +45,7 @@ func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
 		switch int(raw.detail) {
 		// 1 = Left Button
 		case 1:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type:   types.MouseButtonPress,
 				DX:     0,
 				DY:     0,
@@ -53,7 +53,7 @@ func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
 			}
 		// 2 = Middle Button
 		case 2:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type:   types.MouseButtonPress,
 				DX:     0,
 				DY:     0,
@@ -61,7 +61,7 @@ func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
 			}
 		// 3 = Right Button
 		case 3:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type:   types.MouseButtonPress,
 				DX:     0,
 				DY:     0,
@@ -69,35 +69,35 @@ func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
 			}
 		// 4 = Scroll Wheel Up
 		case 4:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type: types.MouseScroll,
 				DX:   0,
 				DY:   1,
 			}
 		// 5 = Scroll Wheel Down
 		case 5:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type: types.MouseScroll,
 				DX:   0,
 				DY:  -1,
 			}
 		// 6 = Scroll Wheel Left
 		case 6:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type: types.MouseScroll,
 				DX:   -1,
 				DY:    0,
 			}
 		// 7 = Scroll Wheel Right
 		case 7:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type: types.MouseScroll,
 				DX:   1,
 				DY:   0,
 			}
 		default:
 			// XXX: Debug info
-			// state.MouseEvents <- types.MouseEvent{
+			// bridge.MouseEvents <- types.MouseEvent{
 			// 	Type:   types.MouseButtonPress,
 			// 	Button: int(raw.detail),
 			// }
@@ -110,7 +110,7 @@ func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
 		switch int(raw.detail) {
 		// 1 = Left Button
 		case 1:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type:   types.MouseButtonRelease,
 				DX:     0,
 				DY:     0,
@@ -118,7 +118,7 @@ func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
 			}
 		// 2 = Middle Button
 		case 2:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type:   types.MouseButtonRelease,
 				DX:     0,
 				DY:     0,
@@ -126,7 +126,7 @@ func handleMouseEvent(state *State, cookie *C.XGenericEventCookie) {
 			}
 		// 3 = Right Button
 		case 3:
-			state.MouseEvents <- types.MouseEvent{
+			bridge.MouseEvents <- types.MouseEvent{
 				Type:   types.MouseButtonRelease,
 				DX:     0,
 				DY:     0,

@@ -1,4 +1,4 @@
-package receivers
+package xorg
 
 /*
 #cgo CFLAGS: -I/usr/include
@@ -12,12 +12,12 @@ import "C"
 import "errors"
 import "github.com/cookiengineer/hydra/types"
 
-func SimulateMousePress(state *types.State, button types.MouseEventButton) error {
+func SimulateMouseRelease(bridge *Bridge, button types.MouseEventButton) error {
 
-	if state.Display != nil {
+	if bridge.display != nil {
 
-		C.XTestFakeButtonEvent(state.Display, C.uint(uint(button)), 1, 0)
-		C.XFlush(state.Display)
+		C.XTestFakeButtonEvent(bridge.display, C.uint(uint(button)), 0, 0)
+		C.XFlush(bridge.display)
 
 		return nil
 

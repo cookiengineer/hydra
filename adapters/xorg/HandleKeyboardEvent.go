@@ -1,4 +1,4 @@
-package listeners
+package xorg
 
 /*
 #cgo CFLAGS: -I/usr/include
@@ -10,7 +10,7 @@ import "C"
 
 import "github.com/cookiengineer/hydra/types"
 
-func handleKeyboardEvent(state *State, cookie *C.XGenericEventCookie) {
+func HandleKeyboardEvent(bridge *Bridge, cookie *C.XGenericEventCookie) {
 
 	switch cookie.evtype {
 
@@ -18,7 +18,7 @@ func handleKeyboardEvent(state *State, cookie *C.XGenericEventCookie) {
 
 		raw := (*C.XIRawEvent)(cookie.data)
 
-		state.KeyboardEvents <- types.KeyboardEvent{
+		bridge.KeyboardEvents <- types.KeyboardEvent{
 			Type:    types.KeyPress,
 			Keycode: uint32(raw.detail),
 		}
@@ -27,7 +27,7 @@ func handleKeyboardEvent(state *State, cookie *C.XGenericEventCookie) {
 
 		raw := (*C.XIRawEvent)(cookie.data)
 
-		state.KeyboardEvents <- types.KeyboardEvent{
+		bridge.KeyboardEvents <- types.KeyboardEvent{
 			Type:    types.KeyRelease,
 			Keycode: uint32(raw.detail),
 		}

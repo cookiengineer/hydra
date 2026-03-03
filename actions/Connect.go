@@ -1,20 +1,16 @@
 package actions
 
-import (
-	"bufio"
-	"bytes"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"net"
-	"net/http"
-	"os"
-
-	"github.com/cookiengineer/hydra/listeners"
-	"github.com/cookiengineer/hydra/parsers"
-	"github.com/cookiengineer/hydra/receivers"
-	"github.com/cookiengineer/hydra/types"
-)
+import "bufio"
+import "bytes"
+import "encoding/json"
+import "errors"
+import "fmt"
+import "net"
+import "net/http"
+import "os"
+import "github.com/cookiengineer/hydra/adapters/xorg"
+import "github.com/cookiengineer/hydra/parsers"
+import "github.com/cookiengineer/hydra/types"
 
 // Connect sends the client machine info to the server
 func Connect(host string, position string) error {
@@ -86,17 +82,17 @@ func ReceiveEvents(host string, virtualScreen *types.VirtualScreen) error {
 
 	scanner := bufio.NewScanner(resp.Body)
 
-	// Local state to control mouse/keyboard
-	state, err := listeners.Init(":0")
-	if err != nil {
-		return err
+	bridge, err0 := xorg.NewBridge(":0")
+
+	if err0 == nil {
+
+
 	}
-	defer state.Destroy()
 
 	// Attach virtual screen for offset calculations
 	state.VirtualScreen = virtualScreen
 
-	go listeners.StartLoop(state)
+	go bridge.Init()
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -109,18 +105,21 @@ func ReceiveEvents(host string, virtualScreen *types.VirtualScreen) error {
 		if err := json.Unmarshal(line, &me); err == nil && me.Type != 0 {
 			// Treat DX/DY as absolute global coordinates
 			state.WarpPointer(me.DX, me.DY)
-			receivers.ApplyMouseEvent(state, &me)
+			// receivers.ApplyMouseEvent(state, &me)
 			continue
 		}
 
 		// Try KeyboardEvent
 		var ke types.KeyboardEvent
 		if err := json.Unmarshal(line, &ke); err == nil && ke.Type != 0 {
-			receivers.ApplyKeyboardEvent(state, &ke)
+			// receivers.ApplyKeyboardEvent(state, &ke)
 			continue
 		}
 	}
 
+	bridge.Destroy()
+
 	return scanner.Err()
+
 }
 

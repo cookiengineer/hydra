@@ -1,4 +1,4 @@
-package receivers
+package xorg
 
 /*
 #cgo CFLAGS: -I/usr/include
@@ -9,31 +9,30 @@ package receivers
 import "C"
 
 import "errors"
-import "github.com/cookiengineer/hydra/types"
 
-func SimulateMouseMove(state *types.State, x int, y int) error {
+func SimulateMouseMove(bridge *Bridge, x int, y int) error {
 
-	if state.Display != nil {
+	if bridge.display != nil {
 
 		dest_x := C.int(x)
 		dest_y := C.int(y)
 
-		if state.Screen != nil {
-			offset_x := state.Screen.OffsetX
-			offset_y := state.Screen.OffsetY
+		if bridge.Screen != nil {
+			offset_x := bridge.Screen.OffsetX
+			offset_y := bridge.Screen.OffsetY
 			dest_x = C.int(x - offset_x)
 			dest_y = C.int(y - offset_y)
 		}
 
 		C.XWarpPointer(
-			state.Display,
+			bridge.display,
 			0,
-			state.XWindow,
+			bridge.window,
 			0, 0, 0, 0,
 			dest_x,
 			dest_y,
 		)
-		C.XFlush(state.Display)
+		C.XFlush(bridge.display)
 
 		return nil
 

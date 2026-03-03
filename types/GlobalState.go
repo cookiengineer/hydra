@@ -7,7 +7,7 @@ type GlobalState struct {
 	Controller string              `json:"controller"` // has connected mouse and keyboard
 	This       string              `json:"this"`       // this (local) machine
 	Machines   map[string]*Machine `json:"machines"`   // all connected machines
-	State      *State              `json:"state"`      // local state
+	Screen     *Screen             `json:"screen"`     // all connected screens
 }
 
 func NewGlobalState(controller Machine) *GlobalState {
@@ -92,15 +92,9 @@ func (state *GlobalState) ComputeVirtualScreen() {
 	virtual_screen := computeVirtualScreen(state.Controller, state.Machines)
 
 	if virtual_screen != nil {
-
-		state.State = &State{
-			Screen: virtual_screen,
-		}
-
+		state.Screen = virtual_screen
 	} else {
-
-		state.State = nil
-
+		state.Screen = nil
 	}
 
 	state.Mutex.Unlock()
