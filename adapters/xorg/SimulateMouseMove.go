@@ -32,6 +32,7 @@ func SimulateMouseMove(bridge *Bridge, x int, y int) error {
 			dest_x,
 			dest_y,
 		)
+
 		C.XFlush(bridge.display)
 
 		return nil
