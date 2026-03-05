@@ -37,53 +37,27 @@ func Listen(host string) error {
 
 	if err0 == nil && err1 == nil {
 
-		global_state := types.NewGlobalState(types.Machine{
+		config := types.NewConfig(types.Machine{
 			Hostname: host,
 			IP:       "", // populated later
 			Position: "center",
 			Screen:   *screen,
 		})
 
-		http.HandleFunc("/state", func(response http.ResponseWriter, request *http.Request) {
+		// Controller is the current machine
+		config.SetThis(host)
 
-			global_state.Lock()
+		http.HandleFunc("/config",    handlers.OnConfig(config))
+		// func(response http.ResponseWriter, request *http.Request) {
 
-			// TODO: Error handling
+		// 	config.Lock()
+		// 	json.NewEncoder(response).Encode(config)
+		// 	config.Unlock()
 
-			json.NewEncoder(response).Encode(global_state)
+		// })
 
-			global_state.Unlock()
-
-		})
-
-		http.HandleFunc("/connect", handlers.OnConnect(global_state))
-
-		http.HandleFunc("/disconnect", func(response http.ResponseWriter, request *http.Request) {
-
-			var machine types.Machine
-
-			json.NewDecoder(request.Body).Decode(&machine)
-
-			fmt.Println("/disconnect from %s: %v", machine.Hostname, machine)
-
-			global_state.Lock()
-
-			for m, other := range global_state.Machines {
-
-				if other.Hostname == machine.Hostname {
-					global_state.Machines = append(global_state.Machines[:m], global_state.Machines[m+1:]...)
-					break
-				}
-
-			}
-
-			global_state.ComputeVirtualScreen()
-
-			response.WriteHeader(http.StatusOK)
-
-			global_state.Unlock()
-
-		})
+		http.HandleFunc("/connect",    handlers.OnConnect(config))
+		http.HandleFunc("/disconnect", handlers.OnDisconnect(config))
 
 		go http.ListenAndServe(":3000", nil)
 
@@ -95,49 +69,39 @@ func Listen(host string) error {
 				select {
 				case <-bridge.MouseEvents:
 
-					x, y, err := bridge.QueryPointer()
+					mouse_x, mouse_y, err0 := bridge.QueryPointer()
 
-					if err == nil {
+					if err0 == nil {
 
-						global_state.Lock()
+						config.Lock()
 
-						hostWidth := global_state.Host.Screen.Width
-						hostHeight := global_state.Host.Screen.Height
+						controller := config.GetMachine(config.Controller)
 
-						// Only evaluate boundary switching if no remote is active
-						if global_state.Active == nil {
+						if config.This == config.Controller {
 
 							var target *types.Machine
 
-							if x <= 0 {
-								for i := range global_state.Machines {
-									if global_state.Machines[i].Position == "left-of" {
-										target = &global_state.Machines[i]
-										break
-									}
-								}
-							} else if x >= hostWidth-1 {
-								for i := range global_state.Machines {
-									if global_state.Machines[i].Position == "right-of" {
-										target = &global_state.Machines[i]
-										break
-									}
-								}
-							} else if y <= 0 {
-								for i := range global_state.Machines {
-									if global_state.Machines[i].Position == "above" {
-										target = &global_state.Machines[i]
-										break
-									}
-								}
-							} else if y >= hostHeight-1 {
-								for i := range global_state.Machines {
-									if global_state.Machines[i].Position == "below" {
-										target = &global_state.Machines[i]
-										break
-									}
-								}
+							if mouse_x <= 1 {
+								target = config.QueryMachine("left-of")
+							} else if mouse_x >= controller.Screen.Width - 1 {
+								target = config.QueryMachine("right-of")
+							} else if mouse_y <= 1 {
+								target = config.QueryMachine("above")
+							} else if mouse_y >= controller.Screen.Height - 1 {
+								target = config.QueryMachine("below")
+							} else {
+								target = config.QueryMachine("center")
 							}
+
+							if target != nil {
+
+								// TODO: Send to Socket of target machine
+
+							}
+
+						}
+						// Only evaluate boundary switching if no remote is active
+						if global_state.Active == nil {
 
 							if target != nil {
 								global_state.Active = target

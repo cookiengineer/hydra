@@ -5,7 +5,7 @@
 
 Extreme multi head monitor management server and client that integrates well
 across multiple SSH hosts and aims to replace barrier's messed up configurations
-in favor of using `pactl`, `ssh`, xorg`, and `xrandr`.
+in favor of using `pactl`, `ssh`, `xorg`, and `xrandr`.
 
 ## Features
 
