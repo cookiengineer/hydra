@@ -1,31 +1,78 @@
 package handlers
 
+import "encoding/json"
 import "fmt"
+import "io"
 import "net/http"
+import "strings"
 import "time"
 import "github.com/cookiengineer/hydra/types"
 
 // OnConnect is the HTTP handler for new client connections.
 // Keeps a long-lived line-based JSON socket in Machine.Socket.
-func OnConnect(global_state *types.GlobalState) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
 
-		hostname := r.URL.Query().Get("hostname")
-		if hostname == "" {
-			http.Error(w, "missing hostname", http.StatusBadRequest)
-			return
-		}
+func OnConnect(config *types.Config, response http.ResponseWriter, request *http.Request) {
 
-		ip := r.RemoteAddr
+	hostname     := strings.ToLower(strings.TrimSpace(request.Header.Get("Host")))
+	content_type := strings.ToLower(strings.TrimSpace(request.Header.Get("Content-Type")))
+	x_protocol   := strings.ToLower(strings.TrimSpace(request.Header.Get("X-Protocol")))
+	ip           := request.RemoteAddr
 
-		// Find existing machine or create new one
-		var machine *types.Machine
-		for i := range global_state.Machines {
-			if global_state.Machines[i].Hostname == hostname {
-				machine = &global_state.Machines[i]
-				break
+	if hostname == config.Controller && content_type == "application/json" && x_protocol == "hydra" {
+
+		machine := config.GetMachine(hostname)
+
+		if machine == nil {
+
+			bytes, err0 := io.ReadAll(request.Body)
+
+			if err0 == nil {
+
+				var tmp types.Machine
+
+				err1 := json.Unmarshal(bytes, &tmp)
+
+				if err1 == nil {
+
+					err2 := tmp.Parse()
+
+					if err2 == nil {
+
+						config.UpdateMachine(tmp)
+
+					} else {
+
+						// TODO: Payload Error
+
+					}
+
+					config.UpdateMachine(types.Machine{
+						Hostname: strings.ToLower(strings.TrimSpace(tmp.Hostname)),
+						// TODO: Other properties
+						// Socket: make(chan []byte),
+					})
+					// TODO: config.UpdateMachine(machine) ?
+
+				} else {
+					// TODO: Internal Server Error?
+				}
+
+			} else {
+				// TODO: Internal Server Error?
 			}
+
+		} else {
+
+			// TODO: Conflict?
+
 		}
+
+	} else {
+
+		// TODO: Malformed payload
+
+	}
+
 
 		if machine == nil {
 			global_state.Lock()
@@ -71,4 +118,3 @@ func OnConnect(global_state *types.GlobalState) http.HandlerFunc {
 			}
 		}
 	}
-}

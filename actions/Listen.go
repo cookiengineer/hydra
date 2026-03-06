@@ -56,8 +56,13 @@ func Listen(host string) error {
 
 		// })
 
-		http.HandleFunc("/connect",    handlers.OnConnect(config))
-		http.HandleFunc("/disconnect", handlers.OnDisconnect(config))
+		http.HandleFunc("/connect", func(response http.ResponseWriter, request *http.Request) {
+			handlers.OnConnect(config, response, request)
+		})
+
+		http.HandleFunc("/disconnect", func(response http.ResponseWriter, request *http.Request) {
+			handlers.OnDisconnect(config, response, request)
+		})
 
 		go http.ListenAndServe(":3000", nil)
 
