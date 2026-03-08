@@ -2,26 +2,31 @@ package xorg
 
 /*
 #cgo CFLAGS: -I/usr/include
-#cgo LDFLAGS: -lX11 -lXi
+#cgo LDFLAGS: -lX11 -lXi -lXtst
 #include <X11/Xlib.h>
 #include <X11/extensions/XInput2.h>
+#include <X11/extensions/XTest.h>
 */
 import "C"
 
 import "errors"
 
-func SimulateMouseMove(bridge *Bridge, x int, y int) error {
+func SimulateMouseMove(bridge *Bridge, x uint, y uint, dx int, dy int) error {
 
 	if bridge.display != nil {
 
-		dest_x := C.int(x)
-		dest_y := C.int(y)
+		origin_x := C.int(x)
+		origin_y := C.int(x)
+		target_x := C.int(int(x) + int(dx))
+		target_y := C.int(int(y) + int(dy))
 
 		if bridge.Screen != nil {
 			offset_x := bridge.Screen.OffsetX
 			offset_y := bridge.Screen.OffsetY
-			dest_x = C.int(x - offset_x)
-			dest_y = C.int(y - offset_y)
+			origin_x = C.int(int(x) - int(offset_x))
+			origin_y = C.int(int(y) - int(offset_y))
+			target_x = C.int(int(x) + int(dx) - int(offset_x))
+			target_y = C.int(int(y) + int(dy) - int(offset_y))
 		}
 
 		C.XWarpPointer(
@@ -29,8 +34,16 @@ func SimulateMouseMove(bridge *Bridge, x int, y int) error {
 			0,
 			bridge.window,
 			0, 0, 0, 0,
-			dest_x,
-			dest_y,
+			origin_x,
+			origin_y,
+		)
+
+		C.XTestFakeMotionEvent(
+			bridge.display,
+			-1,
+			target_x,
+			target_y,
+			C.CurrentTime,
 		)
 
 		C.XFlush(bridge.display)

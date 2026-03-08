@@ -41,7 +41,7 @@ func Listen(host string) error {
 			Hostname: host,
 			IP:       "", // populated later
 			Position: "center",
-			Screen:   *screen,
+			Screen:   screen,
 		})
 
 		// Controller is the current machine
@@ -78,8 +78,6 @@ func Listen(host string) error {
 
 					if err0 == nil {
 
-						config.Lock()
-
 						controller := config.GetMachine(config.Controller)
 
 						if config.This == config.Controller {
@@ -95,10 +93,13 @@ func Listen(host string) error {
 							} else if mouse_y >= controller.Screen.Height - 1 {
 								target = config.QueryMachine("below")
 							} else {
-								target = config.QueryMachine("center")
+								target = config.GetMachine(config.This)
 							}
 
-							if target != nil {
+							if target != nil && target.Position != "center" {
+
+								// TODO: Activate remote machine, deactivate local controls
+								// TODO: Send mouse events to remote machine
 
 								// TODO: Send to Socket of target machine
 
@@ -137,8 +138,6 @@ func Listen(host string) error {
 							}
 
 						}
-
-						global_state.Unlock()
 
 					}
 

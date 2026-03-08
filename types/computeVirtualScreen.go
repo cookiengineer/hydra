@@ -2,10 +2,10 @@ package types
 
 func computeVirtualScreen(controller string, machines map[string]*Machine) *Screen {
 
-	virtual_min_x := 0
-	virtual_min_y := 0
-	virtual_max_x := 0
-	virtual_max_y := 0
+	virtual_min_x := uint(0)
+	virtual_min_y := uint(0)
+	virtual_max_x := uint(0)
+	virtual_max_y := uint(0)
 
 	controller_machine, ok := machines[controller]
 
@@ -96,8 +96,8 @@ func computeVirtualScreen(controller string, machines map[string]*Machine) *Scre
 
 	}
 
-	relative_offset_x := 0
-	relative_offset_y := 0
+	relative_offset_x := uint(0)
+	relative_offset_y := uint(0)
 
 	for _, machine := range left_to_right {
 

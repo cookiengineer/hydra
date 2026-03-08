@@ -2,7 +2,7 @@ package xorg
 
 /*
 #cgo CFLAGS: -I/usr/include
-#cgo LDFLAGS: -lX11 -lXi
+#cgo LDFLAGS: -lX11 -lXi -lXtst
 #include <X11/Xlib.h>
 #include <X11/extensions/XInput2.h>
 #include <X11/extensions/XTest.h>
@@ -12,11 +12,37 @@ import "C"
 import "errors"
 import "github.com/cookiengineer/hydra/types"
 
-func SimulateMouseRelease(bridge *Bridge, button types.MouseEventButton) error {
+func SimulateMouseRelease(bridge *Bridge, x uint, y uint, button types.MouseEventButton) error {
 
 	if bridge.display != nil {
 
-		C.XTestFakeButtonEvent(bridge.display, C.uint(uint(button)), 0, 0)
+		target_x := C.int(x)
+		target_y := C.int(y)
+		target_button := C.uint(uint(button))
+
+		if bridge.Screen != nil {
+			offset_x := bridge.Screen.OffsetX
+			offset_y := bridge.Screen.OffsetY
+			target_x = C.int(int(x) - int(offset_x))
+			target_y = C.int(int(y) - int(offset_y))
+		}
+
+		C.XWarpPointer(
+			bridge.display,
+			0,
+			bridge.window,
+			0, 0, 0, 0,
+			target_x,
+			target_y,
+		)
+
+		C.XTestFakeButtonEvent(
+			bridge.display,
+			target_button,
+			0,
+			0,
+		)
+
 		C.XFlush(bridge.display)
 
 		return nil

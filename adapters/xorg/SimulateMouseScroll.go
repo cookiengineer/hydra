@@ -4,9 +4,8 @@ package xorg
 #cgo CFLAGS: -I/usr/include
 #cgo LDFLAGS: -lX11 -lXi -lXtst
 #include <X11/Xlib.h>
-#include <X11/Xutil.h>
+#include <X11/extensions/XInput2.h>
 #include <X11/extensions/XTest.h>
-#include <stdlib.h>
 */
 import "C"
 
@@ -25,35 +24,76 @@ func to_abs_int(value int) int {
 	return value
 }
 
-func SimulateMouseScroll(bridge *Bridge, dx int, dy int) error {
+func SimulateMouseScroll(bridge *Bridge, x uint, y uint, dx int, dy int) error {
 
 	if bridge.display != nil {
+
+		target_x := C.int(x)
+		target_y := C.int(y)
+
+		if bridge.Screen != nil {
+			offset_x := bridge.Screen.OffsetX
+			offset_y := bridge.Screen.OffsetY
+			target_x = C.int(int(x) - int(offset_x))
+			target_y = C.int(int(y) - int(offset_y))
+		}
+
+		C.XWarpPointer(
+			bridge.display,
+			0,
+			bridge.window,
+			0, 0, 0, 0,
+			target_x,
+			target_y,
+		)
 
 		C.XFlush(bridge.display)
 
 		for d := 0; d < to_abs_int(dy); d++ {
 
-			button := 4
+			target_button := C.uint(4)
 
 			if dy < 0 {
-				button = 5
+				target_button = C.uint(5)
 			}
 
-			C.XTestFakeButtonEvent(bridge.display, C.uint(button), 1, 0)
-			C.XTestFakeButtonEvent(bridge.display, C.uint(button), 0, 0)
+			C.XTestFakeButtonEvent(
+				bridge.display,
+				target_button,
+				1,
+				0,
+			)
+
+			C.XTestFakeButtonEvent(
+				bridge.display,
+				target_button,
+				0,
+				0,
+			)
 
 		}
 
 		for d := 0; d < to_abs_int(dx); d++ {
 
-			button := 6
+			target_button := C.uint(6)
 
 			if dx < 0 {
-				button = 7
+				target_button = C.uint(7)
 			}
 
-			C.XTestFakeButtonEvent(bridge.display, C.uint(button), 1, 0)
-			C.XTestFakeButtonEvent(bridge.display, C.uint(button), 0, 0)
+			C.XTestFakeButtonEvent(
+				bridge.display,
+				target_button,
+				1,
+				0,
+			)
+
+			C.XTestFakeButtonEvent(
+				bridge.display,
+				target_button,
+				0,
+				0,
+			)
 
 		}
 
