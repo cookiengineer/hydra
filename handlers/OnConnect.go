@@ -16,7 +16,6 @@ func OnConnect(config *types.Config, response http.ResponseWriter, request *http
 	hostname     := strings.ToLower(strings.TrimSpace(request.Header.Get("Host")))
 	content_type := strings.ToLower(strings.TrimSpace(request.Header.Get("Content-Type")))
 	x_protocol   := strings.ToLower(strings.TrimSpace(request.Header.Get("X-Protocol")))
-	ip           := request.RemoteAddr
 
 	if hostname == config.Controller && content_type == "application/json" && x_protocol == "hydra" {
 
@@ -34,87 +33,83 @@ func OnConnect(config *types.Config, response http.ResponseWriter, request *http
 
 				if err1 == nil {
 
+					// Override IP with actual IP
+					tmp.IP = request.RemoteAddr
+
 					err2 := tmp.Parse()
 
 					if err2 == nil {
 
 						config.UpdateMachine(tmp)
 
+						response.Header().Set("Content-Type",  "application/json")
+						response.Header().Set("Cache-Control", "no-cache")
+						response.Header().Set("Connection",    "keep-alive")
+
+						flusher, ok := response.(http.Flusher)
+
+						if ok == true {
+
+							fmt.Println("Client connected: %s (%s)\n", tmp.Hostname, tmp.IP)
+
+							for {
+								select {
+								case data := <-machine.Socket:
+									fmt.Fprintf(response, "%s\n", data)
+									flusher.Flush()
+								case <-request.Context().Done():
+									fmt.Println("Client disconnected: %s (%s)\n", tmp.Hostname, tmp.IP)
+								case <-time.After(30 * time.Second):
+									fmt.Fprintf(response, "{}\n")
+									flusher.Flush()
+								}
+							}
+
+						} else {
+
+							response.WriteHeader(http.StatusUpgradeRequired)
+							response.Write([]byte("{\"error\": \"Upgrade Required: Hydra Client must use keep-alive connections\"}"))
+
+						}
+
 					} else {
 
-						// TODO: Payload Error
+						response.Header().Set("Content-Type", "application/json")
+						response.WriteHeader(http.StatusBadRequest)
+						response.Write([]byte("{\"error\": \"Bad Request: Invalid Payload\"}"))
 
 					}
 
-					config.UpdateMachine(types.Machine{
-						Hostname: strings.ToLower(strings.TrimSpace(tmp.Hostname)),
-						// TODO: Other properties
-						// Socket: make(chan []byte),
-					})
-					// TODO: config.UpdateMachine(machine) ?
-
 				} else {
-					// TODO: Internal Server Error?
+
+					response.Header().Set("Content-Type", "application/json")
+					response.WriteHeader(http.StatusBadRequest)
+					response.Write([]byte("{\"error\": \"Bad Request: Invalid Payload\"}"))
+
 				}
 
 			} else {
-				// TODO: Internal Server Error?
+
+				response.Header().Set("Content-Type", "application/json")
+				response.WriteHeader(http.StatusBadRequest)
+				response.Write([]byte("{\"error\": \"Bad Request: Invalid Payload\"}"))
+
 			}
 
 		} else {
 
-			// TODO: Conflict?
+			response.Header().Set("Content-Type", "application/json")
+			response.WriteHeader(http.StatusConflict)
+			response.Write([]byte("{\"error\": \"Conflict: Machine already registered\"}"))
 
 		}
 
 	} else {
 
-		// TODO: Malformed payload
+		response.Header().Set("Content-Type", "application/json")
+		response.WriteHeader(http.StatusPreconditionFailed)
+		response.Write([]byte("{\"error\": \"Precondition Failed: Not a Hydra Client\"}"))
 
 	}
 
-
-		if machine == nil {
-			global_state.Lock()
-			global_state.Machines = append(global_state.Machines, types.Machine{
-				Hostname: hostname,
-				IP:       ip,
-				Socket:   make(chan []byte, 128),
-			})
-			machine = &global_state.Machines[len(global_state.Machines)-1]
-			global_state.Unlock()
-		} else {
-			// Reconnect: recreate socket channel
-			machine.Socket = make(chan []byte, 128)
-		}
-
-		// Set headers for streaming
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
-
-		flusher, ok := w.(http.Flusher)
-		if !ok {
-			http.Error(w, "streaming not supported", http.StatusInternalServerError)
-			return
-		}
-
-		fmt.Printf("Client connected: %s (%s)\n", hostname, ip)
-
-		// Keep sending JSON lines until client disconnects
-		for {
-			select {
-			case data := <-machine.Socket:
-				// Send a line with JSON
-				fmt.Fprintf(w, "%s\n", data)
-				flusher.Flush()
-			case <-r.Context().Done():
-				fmt.Printf("Client disconnected: %s (%s)\n", hostname, ip)
-				return
-			case <-time.After(30 * time.Second):
-				// Keep connection alive
-				fmt.Fprintf(w, "{}\n")
-				flusher.Flush()
-			}
-		}
-	}
+}
