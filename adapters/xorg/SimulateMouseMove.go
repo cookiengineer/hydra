@@ -16,7 +16,7 @@ func SimulateMouseMove(bridge *Bridge, x uint, y uint, dx int, dy int) error {
 	if bridge.display != nil {
 
 		origin_x := C.int(x)
-		origin_y := C.int(x)
+		origin_y := C.int(y)
 		target_x := C.int(int(x) + int(dx))
 		target_y := C.int(int(y) + int(dy))
 
