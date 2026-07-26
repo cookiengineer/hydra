@@ -34,6 +34,18 @@ func TileWindow(bridge *Bridge, window_id uint64, position types.TilePosition, m
 		target_w = area_w / 2
 		target_h = area_h
 
+	case types.TileTop:
+		target_x = area_x
+		target_y = area_y
+		target_w = area_w
+		target_h = area_h / 2
+
+	case types.TileBottom:
+		target_x = area_x
+		target_y = area_y + area_h/2
+		target_w = area_w
+		target_h = area_h / 2
+
 	case types.TileTopLeft:
 		target_x = area_x
 		target_y = area_y
