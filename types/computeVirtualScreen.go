@@ -1,9 +1,7 @@
 package types
 
-func computeVirtualScreen(controller string, machines map[string]*Machine) *Screen {
+func computeVirtualScreen(controller string, machines map[string]*Machine) *VirtualScreen {
 
-	virtual_min_x := uint(0)
-	virtual_min_y := uint(0)
 	virtual_max_x := uint(0)
 	virtual_max_y := uint(0)
 
@@ -11,8 +9,6 @@ func computeVirtualScreen(controller string, machines map[string]*Machine) *Scre
 
 	if ok == true {
 
-		virtual_min_x = controller_machine.Screen.OffsetX
-		virtual_min_y = controller_machine.Screen.OffsetY
 		virtual_max_x = controller_machine.Screen.OffsetX + controller_machine.Screen.Width
 		virtual_max_y = controller_machine.Screen.OffsetY + controller_machine.Screen.Height
 
@@ -27,9 +23,7 @@ func computeVirtualScreen(controller string, machines map[string]*Machine) *Scre
 		switch machine.Position {
 		case "left-of":
 
-			left_to_right = make([]*Machine, 0)
-			left_to_right = append(left_to_right, machine)
-			left_to_right = append(left_to_right, left_to_right...)
+			left_to_right = append([]*Machine{machine}, left_to_right...)
 
 		case "right-of":
 
@@ -64,9 +58,7 @@ func computeVirtualScreen(controller string, machines map[string]*Machine) *Scre
 		switch machine.Position {
 		case "above":
 
-			top_to_bottom = make([]*Machine, 0)
-			top_to_bottom = append(top_to_bottom, machine)
-			top_to_bottom = append(top_to_bottom, top_to_bottom...)
+			top_to_bottom = append([]*Machine{machine}, top_to_bottom...)
 
 		case "below":
 
@@ -131,13 +123,27 @@ func computeVirtualScreen(controller string, machines map[string]*Machine) *Scre
 
 	}
 
+	// Ensure all machines' widths and heights contribute to the bounding box
+	for _, machine := range machines {
 
-	return &Screen{
-		Width:    virtual_max_x,
-		Height:   virtual_max_y,
-		Monitors: []Monitor{},
-		OffsetX:  virtual_min_x,
-		OffsetY:  virtual_min_y,
+		if machine.Screen.OffsetX + machine.Screen.Width > virtual_max_x {
+			virtual_max_x = machine.Screen.OffsetX + machine.Screen.Width
+		}
+
+		if machine.Screen.OffsetY + machine.Screen.Height > virtual_max_y {
+			virtual_max_y = machine.Screen.OffsetY + machine.Screen.Height
+		}
+
 	}
+
+	vs := NewVirtualScreen()
+	vs.Width  = virtual_max_x
+	vs.Height = virtual_max_y
+
+	for hostname, machine := range machines {
+		vs.AddMachine(hostname, machine.Screen)
+	}
+
+	return vs
 
 }

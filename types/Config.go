@@ -7,7 +7,7 @@ type Config struct {
 	Controller string              `json:"controller"` // has connected mouse and keyboard
 	This       string              `json:"this"`       // this (local) machine
 	Machines   map[string]*Machine `json:"machines"`   // all connected machines
-	Screen     *Screen             `json:"screen"`     // all connected screens
+	Screen     *VirtualScreen      `json:"screen"`     // all connected screens
 }
 
 func NewConfig(controller Machine) *Config {
@@ -117,6 +117,7 @@ func (config *Config) SetThis(name string) bool {
 func (config *Config) ComputeVirtualScreen() {
 
 	config.Mutex.Lock()
+	defer config.Mutex.Unlock()
 
 	virtual_screen := computeVirtualScreen(config.Controller, config.Machines)
 
@@ -126,6 +127,13 @@ func (config *Config) ComputeVirtualScreen() {
 		config.Screen = nil
 	}
 
-	config.Mutex.Unlock()
+}
+
+func (config *Config) GetVirtualScreen() *VirtualScreen {
+
+	config.Mutex.Lock()
+	defer config.Mutex.Unlock()
+
+	return config.Screen
 
 }
