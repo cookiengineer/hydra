@@ -168,6 +168,42 @@ func (bridge *Bridge) Init() {
 
 }
 
+func (bridge *Bridge) QueryModifiers() (uint32, error) {
+
+	if bridge.display != nil {
+
+		var returned_root     C.Window
+		var returned_window   C.Window
+		var returned_root_x   C.int
+		var returned_root_y   C.int
+		var returned_window_x C.int
+		var returned_window_y C.int
+		var returned_mask     C.uint
+
+		result := C.XQueryPointer(
+			bridge.display,
+			bridge.window,
+			&returned_root,
+			&returned_window,
+			&returned_root_x,
+			&returned_root_y,
+			&returned_window_x,
+			&returned_window_y,
+			&returned_mask,
+		)
+
+		if result == 0 {
+			return 0, errors.New("XQueryPointer failed")
+		} else {
+			return uint32(returned_mask), nil
+		}
+
+	} else {
+		return 0, errors.New("XDisplay is nil")
+	}
+
+}
+
 func (bridge *Bridge) QueryPointer() (int, int, error) {
 
 	if bridge.display != nil {
@@ -200,6 +236,29 @@ func (bridge *Bridge) QueryPointer() (int, int, error) {
 
 	} else {
 		return 0, 0, errors.New("XDisplay is nil")
+	}
+
+}
+
+func (bridge *Bridge) WarpPointer(x int, y int) error {
+
+	if bridge.display != nil {
+
+		C.XWarpPointer(
+			bridge.display,
+			0,
+			bridge.window,
+			0, 0, 0, 0,
+			C.int(x),
+			C.int(y),
+		)
+
+		C.XFlush(bridge.display)
+
+		return nil
+
+	} else {
+		return errors.New("XDisplay is nil")
 	}
 
 }
