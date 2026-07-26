@@ -19,6 +19,7 @@ XTest for simulation.
 - [ ] SSH tunnel security (planned)
 - [ ] Remote audio integration with pulseaudio (planned)
 - [ ] Remote clipboard augmentation (e.g. `file://` links become `ssh://remote-host` links)
+- [ ] Programmable Window Manager, so that AI assistants can interact with multi-head remote machines
 
 ## Opinions
 
@@ -115,44 +116,9 @@ Key bindings are processed on the controller and work regardless of which machin
 |:-------------------|:------------------------------------------------|
 | `[Super]+[Escape]` | Reset to controller (deactivate remote machine) |
 
-## HTTP API
+## Documentation
 
-Server listens on `:3000` with JSON-over-HTTP newline-delimited streaming.
-
-| Method | Path          | Purpose                                        |
-|:-------|:--------------|:-----------------------------------------------|
-| GET    | `/config`     | Returns full config (machines, virtual screen) |
-| GET    | `/machines`   | Lists connected machines                       |
-| POST   | `/connect`    | Connects client and enters event stream        |
-| POST   | `/disconnect` | Disconnects client                             |
-
-## Protocol
-
-Clients send a POST to `/connect` with their machine info as JSON:
-
-```json
-{
-  "hostname": "machine-bar",
-  "ip": "192.168.0.10",
-  "position": "left-of",
-  "screen": {
-    "width": 1920,
-    "height": 1080,
-    "monitors": [{"output": "HDMI-0", "width": 1920, "height": 1080}]
-  }
-}
-```
-
-The server responds with a newline-delimited event stream:
-
-```json
-{"type":"init","virtual_screen":{"width":5760,"height":1080,"machines":{...}}}
-{"type":"mouse","x":1920,"y":540,"dx":1,"dy":0,"button":0}
-{"type":"keyboard","keycode":113}
-{}
-```
-
-Empty objects `{}` are 30-second keep-alive pings.
+- Use the [BOOTSTRAP.md](./docs/BOOTSTRAP.md) to teach your LLM how to extend and use hydra as a window manager.
 
 ## License
 
