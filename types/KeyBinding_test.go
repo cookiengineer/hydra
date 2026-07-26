@@ -40,12 +40,14 @@ func TestGetDefaultKeyBindings(t *testing.T) {
 
 	expected := []string{
 		ActionResetToController,
+		ActionFocusLeft,
+		ActionFocusRight,
+		ActionFocusUp,
+		ActionFocusDown,
 		ActionTileLeft,
 		ActionTileRight,
-		ActionTileTopLeft,
-		ActionTileTopRight,
-		ActionTileBottomLeft,
-		ActionTileBottomRight,
+		ActionTileTop,
+		ActionTileBottom,
 	}
 
 	for _, action := range expected {
@@ -66,6 +68,8 @@ func TestTilePositionString(t *testing.T) {
 	}{
 		{TileLeft, "left"},
 		{TileRight, "right"},
+		{TileTop, "top"},
+		{TileBottom, "bottom"},
 		{TileTopLeft, "top-left"},
 		{TileTopRight, "top-right"},
 		{TileBottomLeft, "bottom-left"},
@@ -90,6 +94,8 @@ func TestTilePositionFromString(t *testing.T) {
 	}{
 		{"left", TileLeft},
 		{"right", TileRight},
+		{"top", TileTop},
+		{"bottom", TileBottom},
 		{"top-left", TileTopLeft},
 		{"top-right", TileTopRight},
 		{"bottom-left", TileBottomLeft},

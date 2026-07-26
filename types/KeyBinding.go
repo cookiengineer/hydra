@@ -39,8 +39,14 @@ const (
 
 const (
 	ActionResetToController = "reset-to-controller"
+	ActionFocusLeft         = "focus-left"
+	ActionFocusRight        = "focus-right"
+	ActionFocusUp           = "focus-up"
+	ActionFocusDown         = "focus-down"
 	ActionTileLeft          = "tile-left"
 	ActionTileRight         = "tile-right"
+	ActionTileTop           = "tile-top"
+	ActionTileBottom        = "tile-bottom"
 	ActionTileTopLeft       = "tile-top-left"
 	ActionTileTopRight      = "tile-top-right"
 	ActionTileBottomLeft    = "tile-bottom-left"
@@ -58,32 +64,42 @@ func GetDefaultKeyBindings() []KeyBinding {
 		{
 			Modifiers: SuperKeyMask,
 			Keycode:   XK_Left,
-			Action:    ActionTileLeft,
+			Action:    ActionFocusLeft,
 		},
 		{
 			Modifiers: SuperKeyMask,
+			Keycode:   XK_Right,
+			Action:    ActionFocusRight,
+		},
+		{
+			Modifiers: SuperKeyMask,
+			Keycode:   XK_Up,
+			Action:    ActionFocusUp,
+		},
+		{
+			Modifiers: SuperKeyMask,
+			Keycode:   XK_Down,
+			Action:    ActionFocusDown,
+		},
+		{
+			Modifiers: SuperKeyMask | ModShift,
+			Keycode:   XK_Left,
+			Action:    ActionTileLeft,
+		},
+		{
+			Modifiers: SuperKeyMask | ModShift,
 			Keycode:   XK_Right,
 			Action:    ActionTileRight,
 		},
 		{
 			Modifiers: SuperKeyMask | ModShift,
-			Keycode:   XK_Left,
-			Action:    ActionTileTopLeft,
-		},
-		{
-			Modifiers: SuperKeyMask | ModShift,
 			Keycode:   XK_Up,
-			Action:    ActionTileTopRight,
+			Action:    ActionTileTop,
 		},
 		{
 			Modifiers: SuperKeyMask | ModShift,
 			Keycode:   XK_Down,
-			Action:    ActionTileBottomLeft,
-		},
-		{
-			Modifiers: SuperKeyMask | ModShift,
-			Keycode:   XK_Right,
-			Action:    ActionTileBottomRight,
+			Action:    ActionTileBottom,
 		},
 	}
 

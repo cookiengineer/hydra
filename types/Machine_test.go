@@ -122,7 +122,7 @@ func TestMachineParseAllPositions(t *testing.T) {
 		err := machine.Parse()
 
 		if err != nil {
-			t.Errorf("Expected no error for position %s, got: %v", pos, err)
+			t.Errorf("Expected no error for position %s, got: %v", position, err)
 		}
 
 	}

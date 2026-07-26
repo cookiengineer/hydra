@@ -5,10 +5,12 @@ type TilePosition int
 const (
 	TileLeft        TilePosition = 0
 	TileRight       TilePosition = 1
-	TileTopLeft     TilePosition = 2
-	TileTopRight    TilePosition = 3
-	TileBottomLeft  TilePosition = 4
-	TileBottomRight TilePosition = 5
+	TileTop         TilePosition = 2
+	TileBottom      TilePosition = 3
+	TileTopLeft     TilePosition = 4
+	TileTopRight    TilePosition = 5
+	TileBottomLeft  TilePosition = 6
+	TileBottomRight TilePosition = 7
 )
 
 func (position TilePosition) String() string {
@@ -18,6 +20,10 @@ func (position TilePosition) String() string {
 		return "left"
 	case TileRight:
 		return "right"
+	case TileTop:
+		return "top"
+	case TileBottom:
+		return "bottom"
 	case TileTopLeft:
 		return "top-left"
 	case TileTopRight:
@@ -32,13 +38,17 @@ func (position TilePosition) String() string {
 
 }
 
-func TilePositionFromString(tile  string) TilePosition {
+func TilePositionFromString(tile string) TilePosition {
 
 	switch tile {
 	case "left":
 		return TileLeft
 	case "right":
 		return TileRight
+	case "top":
+		return TileTop
+	case "bottom":
+		return TileBottom
 	case "top-left":
 		return TileTopLeft
 	case "top-right":
