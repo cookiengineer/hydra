@@ -14,6 +14,7 @@ XTest for simulation.
 - [x] `hydra connect below <host>` connects to controller (position: below)
 - [x] Virtual screen grid with tiling support
 - [x] Keyboard-driven tiling (Super+Arrow keys)
+- [x] i3-style workspaces (14 workspaces, Super+top-row keys)
 - [x] X11 window management (move, resize, raise, focus, map/unmap)
 - [x] HTTP API for programming and debugging (`/config`, `/connect`, `/disconnect`, `/machines`)
 - [ ] SSH tunnel security (planned)
@@ -48,7 +49,7 @@ bash build.sh;
 ### Run Tests
 
 ```bash
-go test ./handlers/... ./parsers/... ./receivers/... ./types/...
+go test ./handlers/... ./helpers/... ./parsers/... ./receivers/... ./types/...
 ```
 
 ## Usage
@@ -115,6 +116,28 @@ Key bindings are processed on the controller and work regardless of which machin
 | Binding            | Action                                          |
 |:-------------------|:------------------------------------------------|
 | `[Super]+[Escape]` | Reset to controller (deactivate remote machine) |
+
+### Workspace Switching (14 workspaces)
+
+Workspaces are named FG, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, BG.
+
+| Binding                | Action            |
+|:-----------------------|:------------------|
+| `[Super]+[~]`          | Switch to FG (0)  |
+| `[Super]+[0]`..`[9]`  | Switch to 1..10   |
+| `[Super]+[-]`          | Switch to 11      |
+| `[Super]+[+]`          | Switch to 12      |
+| `[Super]+[Backspace]`  | Switch to BG (13) |
+
+### Workspace Moving
+
+| Binding                      | Action                             |
+|:-----------------------------|:-----------------------------------|
+| `[Super]+[Shift]+[~]`        | Move focused window to FG (0)      |
+| `[Super]+[Shift]+[0]`..`[9]` | Move focused window to 1..10       |
+| `[Super]+[Shift]+[-]`        | Move focused window to 11          |
+| `[Super]+[Shift]+[+]`        | Move focused window to 12          |
+| `[Super]+[Shift]+[Backspace]`| Move focused window to BG (13)     |
 
 ## Documentation
 
