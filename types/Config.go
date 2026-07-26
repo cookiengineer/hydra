@@ -1,29 +1,108 @@
 package types
 
+import "encoding/json"
+import "os"
+import "path/filepath"
 import "sync"
 
 type Config struct {
-	Mutex      *sync.Mutex         `json:"-"`
-	Controller string              `json:"controller"` // has connected mouse and keyboard
-	This       string              `json:"this"`       // this (local) machine
-	Machines   map[string]*Machine `json:"machines"`   // all connected machines
-	Screen     *VirtualScreen      `json:"screen"`     // all connected screens
+	Mutex       *sync.Mutex         `json:"-"`
+	This        string              `json:"this"`
+	Controller  string              `json:"controller"`
+	Machines    map[string]*Machine `json:"machines"`
+	Screen      *VirtualScreen      `json:"screen"`
+	Workspaces  []Workspace         `json:"workspaces"`
+	KeyBindings []KeyBinding        `json:"key_bindings"`
+}
+
+func GetDefaultWorkspaces() []Workspace {
+
+	return []Workspace{
+		{Name: "FG", Index: 0},
+		{Name: "1", Index: 1},
+		{Name: "2", Index: 2},
+		{Name: "3", Index: 3},
+		{Name: "4", Index: 4},
+		{Name: "5", Index: 5},
+		{Name: "6", Index: 6},
+		{Name: "7", Index: 7},
+		{Name: "8", Index: 8},
+		{Name: "9", Index: 9},
+		{Name: "10", Index: 10},
+		{Name: "11", Index: 11},
+		{Name: "12", Index: 12},
+		{Name: "BG", Index: 13},
+	}
+
+}
+
+func resolveConfigPath() string {
+
+	config_home := os.Getenv("XDG_CONFIG_HOME")
+
+	if config_home == "" {
+
+		home, err := os.UserHomeDir()
+
+		if err == nil {
+			config_home = filepath.Join(home, ".config")
+		}
+
+	}
+
+	if config_home == "" {
+		config_home = filepath.Join(os.Getenv("HOME"), ".config")
+	}
+
+	return filepath.Join(config_home, "hydra", "config.json")
+
+}
+
+func LoadConfig() (*Config, error) {
+
+	path := resolveConfigPath()
+
+	data, err := os.ReadFile(path)
+
+	var config Config
+
+	if err == nil {
+		err = json.Unmarshal(data, &config)
+	}
+
+	if err != nil || config.Mutex == nil {
+
+		config = Config{
+			Mutex:       &sync.Mutex{},
+			Controller:  "",
+			This:        "",
+			Machines:    make(map[string]*Machine),
+			Screen:      nil,
+			Workspaces:  GetDefaultWorkspaces(),
+			KeyBindings: GetDefaultKeyBindings(),
+		}
+
+		os.MkdirAll(filepath.Dir(path), 0755)
+		json_data, _ := json.MarshalIndent(config, "", "  ")
+		os.WriteFile(path, json_data, 0644)
+
+	}
+
+	return &config, nil
+
 }
 
 func NewConfig(controller Machine) *Config {
 
-	var config Config
+	config, _ := LoadConfig()
 
-	config.Mutex      = &sync.Mutex{}
 	config.Controller = controller.Hostname
-	config.This       = ""
-	config.Machines   = make(map[string]*Machine)
 
 	config.Machines[controller.Hostname] = &controller
 
 	config.ComputeVirtualScreen()
 
-	return &config
+	return config
 
 }
 

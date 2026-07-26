@@ -4,6 +4,7 @@ type KeyBinding struct {
 	Modifiers uint32 `json:"modifiers"`
 	Keycode   uint32 `json:"keycode"`
 	Action    string `json:"action"`
+	Data      uint32 `json:"data"`
 }
 
 const (
@@ -35,6 +36,20 @@ const (
 	XK_Control_R    uint32 = 0xFFE4
 	XK_Alt_L        uint32 = 0xFFE9
 	XK_Alt_R        uint32 = 0xFFEA
+	XK_grave        uint32 = 0x60
+	XK_0            uint32 = 0x30
+	XK_1            uint32 = 0x31
+	XK_2            uint32 = 0x32
+	XK_3            uint32 = 0x33
+	XK_4            uint32 = 0x34
+	XK_5            uint32 = 0x35
+	XK_6            uint32 = 0x36
+	XK_7            uint32 = 0x37
+	XK_8            uint32 = 0x38
+	XK_9            uint32 = 0x39
+	XK_minus        uint32 = 0x2D
+	XK_plus         uint32 = 0x2B
+	XK_BackSpace    uint32 = 0xFF08
 )
 
 const (
@@ -51,11 +66,33 @@ const (
 	ActionTileTopRight      = "tile-top-right"
 	ActionTileBottomLeft    = "tile-bottom-left"
 	ActionTileBottomRight   = "tile-bottom-right"
+	ActionSwitchWorkspace   = "switch-workspace"
+	ActionMoveToWorkspace   = "move-to-workspace"
 )
+
+var workspaceKeys = []struct {
+	Keycode uint32
+	Index   uint32
+}{
+	{XK_grave, 0},
+	{XK_0, 1},
+	{XK_1, 2},
+	{XK_2, 3},
+	{XK_3, 4},
+	{XK_4, 5},
+	{XK_5, 6},
+	{XK_6, 7},
+	{XK_7, 8},
+	{XK_8, 9},
+	{XK_9, 10},
+	{XK_minus, 11},
+	{XK_plus, 12},
+	{XK_BackSpace, 13},
+}
 
 func GetDefaultKeyBindings() []KeyBinding {
 
-	return []KeyBinding{
+	bindings := []KeyBinding{
 		{
 			Modifiers: SuperKeyMask,
 			Keycode:   XK_Escape,
@@ -102,6 +139,24 @@ func GetDefaultKeyBindings() []KeyBinding {
 			Action:    ActionTileBottom,
 		},
 	}
+
+	for _, wk := range workspaceKeys {
+		bindings = append(bindings, KeyBinding{
+			Modifiers: SuperKeyMask,
+			Keycode:   wk.Keycode,
+			Action:    ActionSwitchWorkspace,
+			Data:      wk.Index,
+		})
+
+		bindings = append(bindings, KeyBinding{
+			Modifiers: SuperKeyMask | ModShift,
+			Keycode:   wk.Keycode,
+			Action:    ActionMoveToWorkspace,
+			Data:      wk.Index,
+		})
+	}
+
+	return bindings
 
 }
 

@@ -31,6 +31,40 @@ func TestNewConfig(t *testing.T) {
 		t.Error("Expected controller machine to be in Machines map")
 	}
 
+	if len(config.Workspaces) != 14 {
+		t.Errorf("Expected 14 workspaces, got %d", len(config.Workspaces))
+	}
+
+	if len(config.KeyBindings) == 0 {
+		t.Error("Expected non-empty KeyBindings")
+	}
+
+}
+
+func TestGetDefaultWorkspaces(t *testing.T) {
+
+	workspaces := GetDefaultWorkspaces()
+
+	if len(workspaces) != 14 {
+		t.Errorf("Expected 14 workspaces, got %d", len(workspaces))
+	}
+
+	if workspaces[0].Name != "FG" || workspaces[0].Index != 0 {
+		t.Errorf("Expected workspace FG at index 0, got %s at %d", workspaces[0].Name, workspaces[0].Index)
+	}
+
+	if workspaces[13].Name != "BG" || workspaces[13].Index != 13 {
+		t.Errorf("Expected workspace BG at index 13, got %s at %d", workspaces[13].Name, workspaces[13].Index)
+	}
+
+	if workspaces[1].Name != "1" {
+		t.Errorf("Expected 1, got %s", workspaces[1].Name)
+	}
+
+	if workspaces[10].Name != "10" {
+		t.Errorf("Expected 10, got %s", workspaces[10].Name)
+	}
+
 }
 
 func TestGetMachine(t *testing.T) {

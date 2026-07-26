@@ -48,6 +48,8 @@ func TestGetDefaultKeyBindings(t *testing.T) {
 		ActionTileRight,
 		ActionTileTop,
 		ActionTileBottom,
+		ActionSwitchWorkspace,
+		ActionMoveToWorkspace,
 	}
 
 	for _, action := range expected {
@@ -56,6 +58,78 @@ func TestGetDefaultKeyBindings(t *testing.T) {
 			t.Errorf("Expected action %s in default bindings", action)
 		}
 
+	}
+
+}
+
+func TestDefaultBindingCount(t *testing.T) {
+
+	bindings := GetDefaultKeyBindings()
+
+	expected := 9 + 14 + 14 // 9 base + 14 switch + 14 move
+
+	if len(bindings) != expected {
+		t.Errorf("Expected %d default bindings, got %d", expected, len(bindings))
+	}
+
+}
+
+func TestWorkspaceBindingData(t *testing.T) {
+
+	bindings := GetDefaultKeyBindings()
+
+	workspace_switch_count := 0
+	workspace_move_count := 0
+
+	for _, b := range bindings {
+
+		if b.Action == ActionSwitchWorkspace {
+			workspace_switch_count++
+			if b.Data > 13 {
+				t.Errorf("Expected Data <= 13, got %d", b.Data)
+			}
+			if b.Modifiers != SuperKeyMask {
+				t.Errorf("Expected SuperKeyMask only, got %d", b.Modifiers)
+			}
+		}
+
+		if b.Action == ActionMoveToWorkspace {
+			workspace_move_count++
+			if b.Data > 13 {
+				t.Errorf("Expected Data <= 13, got %d", b.Data)
+			}
+			if b.Modifiers != SuperKeyMask|ModShift {
+				t.Errorf("Expected SuperKeyMask|ModShift, got %d", b.Modifiers)
+			}
+		}
+
+	}
+
+	if workspace_switch_count != 14 {
+		t.Errorf("Expected 14 workspace switch bindings, got %d", workspace_switch_count)
+	}
+
+	if workspace_move_count != 14 {
+		t.Errorf("Expected 14 workspace move bindings, got %d", workspace_move_count)
+	}
+
+}
+
+func TestKeyBindingData(t *testing.T) {
+
+	binding := KeyBinding{
+		Modifiers: SuperKeyMask,
+		Keycode:   XK_grave,
+		Action:    ActionSwitchWorkspace,
+		Data:      0,
+	}
+
+	if binding.Data != 0 {
+		t.Errorf("Expected Data 0, got %d", binding.Data)
+	}
+
+	if !binding.Matches(SuperKeyMask, XK_grave) {
+		t.Error("Expected match for workspace binding")
 	}
 
 }
