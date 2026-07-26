@@ -122,6 +122,8 @@ func ReceiveEvents(host string) error {
 
 	var virtual_screen *types.VirtualScreen = nil
 
+	state := types.NewGlobalState()
+
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 
@@ -133,17 +135,57 @@ func ReceiveEvents(host string) error {
 			continue
 		}
 
-		var init_message struct {
-			Type          string               `json:"type"`
-			VirtualScreen *types.VirtualScreen `json:"virtual_screen"`
-		}
+		var init_event types.InitEvent
 
-		if err := json.Unmarshal(line, &init_message); err == nil && init_message.Type == "init" {
+		if err := json.Unmarshal(line, &init_event); err == nil && init_event.Type == "init" {
 
-			virtual_screen = init_message.VirtualScreen
+			virtual_screen = init_event.VirtualScreen
+
+			for _, ws := range init_event.Workspaces {
+				ws.Windows = []types.Window{}
+				state.Workspaces[ws.Name] = &ws
+			}
+
+			state.SetActiveWorkspace(init_event.ActiveWorkspace)
 
 			fmt.Printf("Received virtual screen: %dx%d\n", virtual_screen.Width, virtual_screen.Height)
 
+			continue
+
+		}
+
+		var workspace_event types.WorkspaceEvent
+
+		if err := json.Unmarshal(line, &workspace_event); err == nil && workspace_event.Type == "workspace" {
+
+			receivers.ApplyWorkspaceEvent(bridge, state, &workspace_event)
+			continue
+
+		}
+
+		var focus_event types.FocusEvent
+
+		if err := json.Unmarshal(line, &focus_event); err == nil && focus_event.Type == "focus" {
+
+			receivers.ApplyFocusEvent(bridge, &focus_event)
+			continue
+
+		}
+
+		var tile_event types.TileEvent
+
+		if err := json.Unmarshal(line, &tile_event); err == nil && tile_event.Type == "tile" {
+
+			receivers.ApplyTileEvent(bridge, &tile_event, virtual_screen, hostname)
+			continue
+
+		}
+
+		var reset_event types.ResetEvent
+
+		if err := json.Unmarshal(line, &reset_event); err == nil && reset_event.Type == "reset" {
+
+			receivers.ApplyResetEvent(bridge)
 			continue
 
 		}

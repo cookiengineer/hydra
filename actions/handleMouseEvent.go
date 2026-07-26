@@ -39,6 +39,13 @@ func handleMouseEvent(bridge *xorg.Bridge, event types.MouseEvent, state *types.
 		}
 
 		if target != nil && target.Position != "center" {
+
+			focused, err := xorg.QueryFocusedWindow(bridge)
+
+			if err == nil && focused != nil {
+				state.SetLastFocusedWindow(focused.ID)
+			}
+
 			state.SetActive(target)
 			fmt.Printf("Activated remote machine: %s (%s)\n", target.Hostname, target.Position)
 

@@ -87,12 +87,14 @@ func OnConnect(config *types.Config, state *types.GlobalState, response http.Res
 
 	fmt.Printf("Client connected: %s (%s)\n", tmp.Hostname, tmp.IP)
 
-	initPayload := map[string]interface{}{
-		"type":           "init",
-		"virtual_screen": config.GetVirtualScreen(),
+	init_event := types.InitEvent{
+		Type:            "init",
+		VirtualScreen:   config.GetVirtualScreen(),
+		Workspaces:      config.Workspaces,
+		ActiveWorkspace: state.GetActiveWorkspace(),
 	}
-	initJSON, _ := json.Marshal(initPayload)
-	fmt.Fprintf(response, "%s\n", initJSON)
+	init_payload, _ := json.Marshal(init_event)
+	fmt.Fprintf(response, "%s\n", init_payload)
 	flusher.Flush()
 
 	for {

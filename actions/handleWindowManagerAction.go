@@ -1,9 +1,23 @@
 package actions
 
+import "encoding/json"
+import "fmt"
 import "github.com/cookiengineer/hydra/adapters/xorg"
 import "github.com/cookiengineer/hydra/helpers"
 import "github.com/cookiengineer/hydra/types"
-import "fmt"
+
+func sendEvent(socket chan []byte, event interface{}) {
+
+	data, err := json.Marshal(event)
+
+	if err == nil {
+		select {
+		case socket <- data:
+		default:
+		}
+	}
+
+}
 
 func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, state *types.GlobalState, config *types.Config) bool {
 
@@ -11,7 +25,7 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 		return false
 	}
 
-	bindings := types.GetDefaultKeyBindings()
+	bindings := config.KeyBindings
 
 	modifiers, err := bridge.QueryModifiers()
 
@@ -23,9 +37,15 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 
 		if binding.Matches(modifiers, event.Keycode) {
 
+			active := state.GetActive()
+
 			switch binding.Action {
 
 			case types.ActionResetToController:
+
+				if active != nil && active.Socket != nil {
+					sendEvent(active.Socket, types.ResetEvent{Type: "reset"})
+				}
 
 				state.ResetActive()
 
@@ -35,11 +55,37 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 					bridge.WarpPointer(center_x, center_y)
 				}
 
+				last_id := state.GetLastFocusedWindow()
+
+				if last_id != 0 {
+					xorg.FocusWindow(bridge, last_id)
+				}
+
 				fmt.Printf("WindowManager: Reset to controller\n")
 
 				return true
 
 			case types.ActionFocusLeft, types.ActionFocusRight, types.ActionFocusUp, types.ActionFocusDown:
+
+				if active != nil && active.Socket != nil {
+
+					direction := ""
+					switch binding.Action {
+					case types.ActionFocusLeft:
+						direction = "left"
+					case types.ActionFocusRight:
+						direction = "right"
+					case types.ActionFocusUp:
+						direction = "up"
+					case types.ActionFocusDown:
+						direction = "down"
+					}
+
+					sendEvent(active.Socket, types.FocusEvent{Type: "focus", Direction: direction})
+
+					return true
+
+				}
 
 				windows, err := xorg.QueryAllWindows(bridge)
 
@@ -84,6 +130,16 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 				return false
 
 			case types.ActionTileLeft, types.ActionTileRight, types.ActionTileTop, types.ActionTileBottom, types.ActionTileTopLeft, types.ActionTileTopRight, types.ActionTileBottomLeft, types.ActionTileBottomRight:
+
+				if active != nil && active.Socket != nil {
+
+					tile_position := binding.Action[len("tile-"):]
+
+					sendEvent(active.Socket, types.TileEvent{Type: "tile", Position: tile_position})
+
+					return true
+
+				}
 
 				tile_position := types.TilePositionFromString(binding.Action[len("tile-"):])
 
@@ -132,6 +188,48 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 
 				}
 
+			case types.ActionSwitchWorkspace:
+
+				ws := state.GetWorkspaceByIndex(binding.Data)
+
+				if ws == nil {
+					fmt.Printf("WindowManager: Unknown workspace index %d\n", binding.Data)
+					return false
+				}
+
+				if active != nil && active.Socket != nil {
+
+					sendEvent(active.Socket, types.WorkspaceEvent{Type: "workspace", Name: ws.Name, Index: ws.Index})
+
+					return true
+
+				}
+
+				helpers.SwitchWorkspace(bridge, state, ws.Name)
+
+				return true
+
+			case types.ActionMoveToWorkspace:
+
+				ws := state.GetWorkspaceByIndex(binding.Data)
+
+				if ws == nil {
+					fmt.Printf("WindowManager: Unknown workspace index %d\n", binding.Data)
+					return false
+				}
+
+				if active != nil && active.Socket != nil {
+
+					sendEvent(active.Socket, types.WorkspaceEvent{Type: "workspace", Name: ws.Name, Index: ws.Index})
+
+					return true
+
+				}
+
+				helpers.MoveWindowToWorkspace(bridge, state, ws.Name)
+
+				return true
+
 			default:
 
 				fmt.Printf("WindowManager: Unknown action %s\n", binding.Action)
@@ -144,5 +242,5 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 	}
 
 	return false
-}
 
+}
