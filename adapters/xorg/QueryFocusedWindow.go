@@ -25,7 +25,7 @@ func QueryFocusedWindow(bridge *Bridge) (*types.Window, error) {
 
 	C.XGetInputFocus(bridge.display, &focused_window, &revert_to)
 
-	if focused_window == 0 || focused_window == bridge.window {
+	if focused_window == 0 || focused_window == 1 || focused_window == bridge.window {
 		return nil, errors.New("No focused window")
 	}
 

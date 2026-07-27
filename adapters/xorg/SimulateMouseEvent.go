@@ -4,6 +4,10 @@ import "github.com/cookiengineer/hydra/types"
 
 func SimulateMouseEvent(bridge *Bridge, event *types.MouseEvent) {
 
+	if bridge == nil {
+		return
+	}
+
 	switch event.Type {
 	case types.MouseMove:
 		SimulateMouseMove(bridge, event.X, event.Y, event.DX, event.DY)

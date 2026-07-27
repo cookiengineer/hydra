@@ -142,6 +142,7 @@ Workspaces are named FG, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, BG.
 ## Documentation
 
 - Use the [BOOTSTRAP.md](./docs/BOOTSTRAP.md) to teach your LLM how to extend and use hydra as a window manager.
+- Read the [TESTING.md](./docs/TESTING.md) for details on the in-container integration test workflow.
 
 ## License
 
