@@ -5,114 +5,154 @@ import "bytes"
 import "encoding/json"
 import "errors"
 import "fmt"
+import "io"
 import "net"
 import "net/http"
 import "os"
+import "strings"
 import "github.com/cookiengineer/hydra/adapters/xorg"
 import "github.com/cookiengineer/hydra/parsers"
 import "github.com/cookiengineer/hydra/receivers"
 import "github.com/cookiengineer/hydra/types"
 
-func Connect(host string, position string) error {
+func controllerName(host string) string {
 
-	screen, err0 := parsers.Xrandr()
+	name := strings.TrimSpace(os.Getenv("HYDRA_CONTROLLER"))
 
-	if err0 == nil {
+	if name == "" {
+		name = host
+	}
 
-		hostname, err1 := os.Hostname()
+	return strings.ToLower(name)
 
-		if err1 == nil {
+}
 
-			ip := ""
-			addrs, err2 := net.InterfaceAddrs()
+func localIP() (string, error) {
 
-			if err2 == nil {
+	addrs, err := net.InterfaceAddrs()
 
-				for _, addr := range addrs {
+	if err != nil {
+		return "", err
+	}
 
-					if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+	for _, addr := range addrs {
 
-						if ipnet.IP.To4() != nil {
-							ip = ipnet.IP.String()
-							break
-						}
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 
-					}
-
-				}
-
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
 			}
 
-			if ip != "" {
-
-				machine := types.Machine{
-					Hostname: hostname,
-					IP:       ip,
-					Position: position,
-					Screen:   screen,
-				}
-
-				data, err3 := json.Marshal(machine)
-
-				if err3 == nil {
-
-					url := fmt.Sprintf("http://%s:3000/connect", host)
-					response, err4 := http.Post(url, "application/json", bytes.NewBuffer(data))
-
-					if err4 == nil {
-
-						defer response.Body.Close()
-
-						if response.StatusCode == http.StatusOK {
-
-							fmt.Println("Connected to hydra host:", host)
-
-							return nil
-
-						} else {
-							return fmt.Errorf("connect request failed with status: %d", response.StatusCode)
-						}
-
-					} else {
-						return err4
-					}
-
-				} else {
-					return err3
-				}
-
-			} else {
-				return errors.New("Could not determine local IP")
-			}
-
-		} else {
-			return err1
 		}
 
-	} else {
-		return err0
+	}
+
+	return "", errors.New("Could not determine local IP")
+
+}
+
+func sendHandoff(host string, hostname string, direction string) {
+
+	handoff := types.HandoffEvent{
+		Type:      "handoff",
+		Machine:   hostname,
+		Direction: direction,
+	}
+
+	data, err := json.Marshal(handoff)
+
+	if err != nil {
+		return
+	}
+
+	url := fmt.Sprintf("http://%s:%s/event", host, types.Port())
+
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+
+	if err != nil {
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Protocol", "hydra")
+	request.Header.Set("X-Hydra-Controller", controllerName(host))
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+
+	if err == nil {
+		response.Body.Close()
 	}
 
 }
 
-func ReceiveEvents(host string) error {
+func Connect(host string, position string) error {
 
-	hostname, _ := os.Hostname()
-	url := fmt.Sprintf("http://%s:3000/connect?hostname=%s", host, hostname)
+	screen, err0 := parsers.Xrandr()
 
-	resp, err := http.Get(url)
-
-	if err != nil {
-		return err
+	if err0 != nil {
+		return err0
 	}
 
-	defer resp.Body.Close()
+	hostname, err1 := os.Hostname()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("receive events failed with status: %d", resp.StatusCode)
+	if err1 != nil {
+		return err1
 	}
 
-	bridge, err0 := xorg.NewBridge(":0")
+	ip, err2 := localIP()
+
+	if err2 != nil {
+		return err2
+	}
+
+	machine := types.Machine{
+		Hostname: hostname,
+		IP:       ip,
+		Position: position,
+		Screen:   screen,
+	}
+
+	data, err3 := json.Marshal(machine)
+
+	if err3 != nil {
+		return err3
+	}
+
+	url := fmt.Sprintf("http://%s:%s/connect", host, types.Port())
+
+	request, err4 := http.NewRequest("POST", url, bytes.NewBuffer(data))
+
+	if err4 != nil {
+		return err4
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Protocol", "hydra")
+	request.Header.Set("X-Hydra-Controller", controllerName(host))
+
+	client := &http.Client{}
+	response, err5 := client.Do(request)
+
+	if err5 != nil {
+		return err5
+	}
+
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("connect request failed with status: %d", response.StatusCode)
+	}
+
+	fmt.Println("Connected to hydra host:", host)
+
+	return receiveEvents(response.Body, host, hostname)
+
+}
+
+func receiveEvents(body io.Reader, host string, hostname string) error {
+
+	bridge, err0 := xorg.NewBridge(defaultDisplay())
 
 	if err0 != nil {
 		return err0
@@ -124,7 +164,7 @@ func ReceiveEvents(host string) error {
 
 	state := types.NewGlobalState()
 
-	scanner := bufio.NewScanner(resp.Body)
+	scanner := bufio.NewScanner(body)
 	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
 
 	for scanner.Scan() {
@@ -135,9 +175,22 @@ func ReceiveEvents(host string) error {
 			continue
 		}
 
-		var init_event types.InitEvent
+		var envelope types.Event
 
-		if err := json.Unmarshal(line, &init_event); err == nil && init_event.Type == "init" {
+		if err := json.Unmarshal(line, &envelope); err != nil {
+			fmt.Printf("Unknown event: %s\n", string(line))
+			continue
+		}
+
+		switch envelope.Type {
+
+		case "init":
+
+			var init_event types.InitEvent
+
+			if err := envelope.Unmarshal(&init_event); err != nil {
+				continue
+			}
 
 			virtual_screen = init_event.VirtualScreen
 
@@ -148,67 +201,69 @@ func ReceiveEvents(host string) error {
 
 			state.SetActiveWorkspace(init_event.ActiveWorkspace)
 
-			fmt.Printf("Received virtual screen: %dx%d\n", virtual_screen.Width, virtual_screen.Height)
+			if virtual_screen != nil {
+				fmt.Printf("Received virtual screen: %dx%d\n", virtual_screen.Width, virtual_screen.Height)
+			}
 
-			continue
+		case "workspace":
+
+			var workspace_event types.WorkspaceEvent
+
+			if err := envelope.Unmarshal(&workspace_event); err == nil {
+				receivers.ApplyWorkspaceEvent(bridge, state, &workspace_event)
+			}
+
+		case "focus":
+
+			var focus_event types.FocusEvent
+
+			if err := envelope.Unmarshal(&focus_event); err == nil {
+
+				found := receivers.ApplyFocusEvent(bridge, &focus_event)
+
+				if !found && (focus_event.Direction == "left" || focus_event.Direction == "right") {
+					sendHandoff(host, hostname, focus_event.Direction)
+				}
+
+			}
+
+		case "tile":
+
+			var tile_event types.TileEvent
+
+			if err := envelope.Unmarshal(&tile_event); err == nil {
+				receivers.ApplyTileEvent(bridge, &tile_event, virtual_screen, hostname)
+			}
+
+		case "reset":
+
+			var reset_event types.ResetEvent
+
+			if err := envelope.Unmarshal(&reset_event); err == nil {
+				receivers.ApplyResetEvent(bridge)
+			}
+
+		case "mouse":
+
+			var mouse_event types.MouseEvent
+
+			if err := envelope.Unmarshal(&mouse_event); err == nil {
+				receivers.ApplyMouseEvent(bridge, &mouse_event, virtual_screen, hostname)
+			}
+
+		case "keyboard":
+
+			var keyboard_event types.KeyboardEvent
+
+			if err := envelope.Unmarshal(&keyboard_event); err == nil {
+				receivers.ApplyKeyboardEvent(bridge, &keyboard_event)
+			}
+
+		default:
+
+			fmt.Printf("Unknown event: %s\n", string(line))
 
 		}
-
-		var workspace_event types.WorkspaceEvent
-
-		if err := json.Unmarshal(line, &workspace_event); err == nil && workspace_event.Type == "workspace" {
-
-			receivers.ApplyWorkspaceEvent(bridge, state, &workspace_event)
-			continue
-
-		}
-
-		var focus_event types.FocusEvent
-
-		if err := json.Unmarshal(line, &focus_event); err == nil && focus_event.Type == "focus" {
-
-			receivers.ApplyFocusEvent(bridge, &focus_event)
-			continue
-
-		}
-
-		var tile_event types.TileEvent
-
-		if err := json.Unmarshal(line, &tile_event); err == nil && tile_event.Type == "tile" {
-
-			receivers.ApplyTileEvent(bridge, &tile_event, virtual_screen, hostname)
-			continue
-
-		}
-
-		var reset_event types.ResetEvent
-
-		if err := json.Unmarshal(line, &reset_event); err == nil && reset_event.Type == "reset" {
-
-			receivers.ApplyResetEvent(bridge)
-			continue
-
-		}
-
-		var mouse_event types.MouseEvent
-
-		if err := json.Unmarshal(line, &mouse_event); err == nil && mouse_event.Type != 0 {
-
-			receivers.ApplyMouseEvent(bridge, &mouse_event, virtual_screen, hostname)
-			continue
-
-		}
-
-		var keyboard_event types.KeyboardEvent
-
-		if err := json.Unmarshal(line, &keyboard_event); err == nil && keyboard_event.Type != 0 {
-
-			receivers.ApplyKeyboardEvent(bridge, &keyboard_event)
-			continue
-
-		}
-
-		fmt.Printf("Unknown event: %s\n", string(line))
 
 	}
 

@@ -1,5 +1,7 @@
 package types
 
+import "sort"
+
 func computeVirtualScreen(controller string, machines map[string]*Machine) *VirtualScreen {
 
 	virtual_max_x := uint(0)
@@ -18,7 +20,21 @@ func computeVirtualScreen(controller string, machines map[string]*Machine) *Virt
 	left_to_right := make([]*Machine, 0)
 	top_to_bottom := make([]*Machine, 0)
 
-	for _, machine := range machines {
+	hostnames := make([]string, 0, len(machines))
+
+	for hostname := range machines {
+		hostnames = append(hostnames, hostname)
+	}
+
+	sort.Strings(hostnames)
+
+	ordered := make([]*Machine, 0, len(machines))
+
+	for _, hostname := range hostnames {
+		ordered = append(ordered, machines[hostname])
+	}
+
+	for _, machine := range ordered {
 
 		switch machine.Position {
 		case "left-of":
@@ -53,7 +69,7 @@ func computeVirtualScreen(controller string, machines map[string]*Machine) *Virt
 
 	}
 
-	for _, machine := range machines {
+	for _, machine := range ordered {
 
 		switch machine.Position {
 		case "above":

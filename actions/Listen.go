@@ -29,7 +29,7 @@ func Listen(host string) error {
 		cancel()
 	}()
 
-	bridge, err0 := xorg.NewBridge(":0")
+	bridge, err0 := xorg.NewBridge(defaultDisplay())
 	screen, err1 := parsers.Xrandr()
 
 	if err0 == nil && err1 == nil {
@@ -76,7 +76,11 @@ func Listen(host string) error {
 			handlers.OnDisconnect(config, state, response, request)
 		})
 
-		go http.ListenAndServe(":3000", nil)
+		http.HandleFunc("/event", func(response http.ResponseWriter, request *http.Request) {
+			handleEventRequest(bridge, state, config, response, request)
+		})
+
+		go http.ListenAndServe(":"+types.Port(), nil)
 
 		go bridge.Init()
 

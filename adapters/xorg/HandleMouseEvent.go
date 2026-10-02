@@ -24,9 +24,9 @@ func HandleMouseEvent(bridge *Bridge, cookie *C.XGenericEventCookie) {
 
 			values := (*[2]float64)(unsafe.Pointer(raw.raw_values))
 
-			if math.Abs(values[0]) < 0.01 || math.Abs(values[1]) < 0.01 {
+			if math.Abs(values[0]) < 0.01 && math.Abs(values[1]) < 0.01 {
 
-				// Ignore Xinput fake motion event which has dx set to scroll distance
+				// Ignore Xinput fake motion event without any movement
 
 			} else {
 				bridge.MouseEvents <- types.MouseEvent{

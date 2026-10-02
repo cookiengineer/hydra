@@ -1,6 +1,5 @@
 package actions
 
-import "encoding/json"
 import "github.com/cookiengineer/hydra/adapters/xorg"
 import "github.com/cookiengineer/hydra/types"
 
@@ -16,16 +15,24 @@ func handleKeyboardEvent(bridge *xorg.Bridge, event types.KeyboardEvent, state *
 		return
 	}
 
-	target := config.GetMachine(active.Hostname)
+	if event.Keysym == 0 {
 
-	if target != nil && target.Socket != nil {
-		evJSON, err := json.Marshal(event)
+		keysym, err := xorg.KeycodeToKeysym(bridge, event.Keycode)
+
 		if err == nil {
-			select {
-			case target.Socket <- evJSON:
-			default:
-			}
+			event.Keysym = keysym
 		}
+
+	}
+
+	modifiers, err := bridge.QueryModifiers()
+
+	if err == nil {
+		event.Modifiers = modifiers
+	}
+
+	if active.Socket != nil {
+		sendEnvelope(active, "keyboard", event)
 	} else {
 		state.ResetActive()
 	}

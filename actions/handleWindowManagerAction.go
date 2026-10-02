@@ -1,23 +1,9 @@
 package actions
 
-import "encoding/json"
 import "fmt"
 import "github.com/cookiengineer/hydra/adapters/xorg"
 import "github.com/cookiengineer/hydra/helpers"
 import "github.com/cookiengineer/hydra/types"
-
-func sendEvent(socket chan []byte, event interface{}) {
-
-	data, err := json.Marshal(event)
-
-	if err == nil {
-		select {
-		case socket <- data:
-		default:
-		}
-	}
-
-}
 
 func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, state *types.GlobalState, config *types.Config) bool {
 
@@ -35,7 +21,13 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 
 	for _, binding := range bindings {
 
-		if binding.Matches(modifiers, event.Keycode) {
+		binding_keycode, err := xorg.KeysymToKeycode(bridge, binding.Keycode)
+
+		if err != nil || binding_keycode == 0 {
+			continue
+		}
+
+		if binding.Modifiers == modifiers && binding_keycode == event.Keycode {
 
 			active := state.GetActive()
 
@@ -44,7 +36,7 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 			case types.ActionResetToController:
 
 				if active != nil && active.Socket != nil {
-					sendEvent(active.Socket, types.ResetEvent{Type: "reset"})
+					sendEnvelope(active, "reset", types.ResetEvent{Type: "reset"})
 				}
 
 				state.ResetActive()
@@ -67,21 +59,22 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 
 			case types.ActionFocusLeft, types.ActionFocusRight, types.ActionFocusUp, types.ActionFocusDown:
 
+				direction := ""
+
+				switch binding.Action {
+				case types.ActionFocusLeft:
+					direction = "left"
+				case types.ActionFocusRight:
+					direction = "right"
+				case types.ActionFocusUp:
+					direction = "up"
+				case types.ActionFocusDown:
+					direction = "down"
+				}
+
 				if active != nil && active.Socket != nil {
 
-					direction := ""
-					switch binding.Action {
-					case types.ActionFocusLeft:
-						direction = "left"
-					case types.ActionFocusRight:
-						direction = "right"
-					case types.ActionFocusUp:
-						direction = "up"
-					case types.ActionFocusDown:
-						direction = "down"
-					}
-
-					sendEvent(active.Socket, types.FocusEvent{Type: "focus", Direction: direction})
+					sendEnvelope(active, "focus", types.FocusEvent{Type: "focus", Direction: direction})
 
 					return true
 
@@ -89,7 +82,7 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 
 				windows, err := xorg.QueryAllWindows(bridge)
 
-				if err != nil || len(windows) == 0 {
+				if err != nil {
 					fmt.Printf("WindowManager: No windows found\n")
 					return false
 				}
@@ -125,6 +118,65 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 
 				}
 
+				if direction == "right" || direction == "left" {
+
+					position := direction + "-of"
+					target := config.QueryMachine(position)
+
+					if target != nil && target.Socket != nil {
+
+						edge := "first"
+
+						if direction == "left" {
+							edge = "last"
+						}
+
+						return activateFocus(bridge, state, config, target, edge)
+
+					}
+
+					if len(windows) > 0 {
+
+						var wrap *types.Window
+
+						if direction == "right" {
+							wrap = helpers.FindLeftmostWindow(windows)
+						} else {
+							wrap = helpers.FindRightmostWindow(windows)
+						}
+
+						if wrap != nil && wrap.ID != focused.ID {
+							xorg.FocusWindow(bridge, wrap.ID)
+							fmt.Printf("WindowManager: Wrapped to window %s\n", wrap.Title)
+							return true
+						}
+
+					}
+
+				}
+
+				if direction == "up" || direction == "down" {
+
+					if len(windows) > 0 {
+
+						var wrap *types.Window
+
+						if direction == "up" {
+							wrap = helpers.FindBottommostWindow(windows)
+						} else {
+							wrap = helpers.FindTopmostWindow(windows)
+						}
+
+						if wrap != nil && wrap.ID != focused.ID {
+							xorg.FocusWindow(bridge, wrap.ID)
+							fmt.Printf("WindowManager: Wrapped to window %s\n", wrap.Title)
+							return true
+						}
+
+					}
+
+				}
+
 				fmt.Printf("WindowManager: No window in that direction\n")
 
 				return false
@@ -135,7 +187,7 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 
 					tile_position := binding.Action[len("tile-"):]
 
-					sendEvent(active.Socket, types.TileEvent{Type: "tile", Position: tile_position})
+					sendEnvelope(active, "tile", types.TileEvent{Type: "tile", Position: tile_position})
 
 					return true
 
@@ -152,7 +204,9 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 					controller_screen := config.Screen.GetMachine(config.Controller)
 
 					if controller_screen != nil && len(controller_screen.Monitors) > 0 {
+
 						for i := range controller_screen.Monitors {
+
 							m := &controller_screen.Monitors[i]
 
 							if window.X >= m.OffsetX && window.X < m.OffsetX+m.Width &&
@@ -160,11 +214,13 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 								monitor = m
 								break
 							}
+
 						}
 
 						if monitor == nil {
 							monitor = &controller_screen.Monitors[0]
 						}
+
 					}
 
 					err1 := xorg.TileWindow(bridge, window.ID, tile_position, monitor)
@@ -199,7 +255,7 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 
 				if active != nil && active.Socket != nil {
 
-					sendEvent(active.Socket, types.WorkspaceEvent{Type: "workspace", Name: ws.Name, Index: ws.Index})
+					sendEnvelope(active, "workspace", types.WorkspaceEvent{Type: "workspace", Name: ws.Name, Index: ws.Index})
 
 					return true
 
@@ -220,7 +276,7 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 
 				if active != nil && active.Socket != nil {
 
-					sendEvent(active.Socket, types.WorkspaceEvent{Type: "workspace", Name: ws.Name, Index: ws.Index})
+					sendEnvelope(active, "workspace", types.WorkspaceEvent{Type: "workspace", Name: ws.Name, Index: ws.Index})
 
 					return true
 

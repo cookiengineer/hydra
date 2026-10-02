@@ -72,13 +72,6 @@ func main() {
 				os.Exit(1)
 			}
 
-			err2 := actions.ReceiveEvents(host)
-
-			if err2 != nil {
-				fmt.Fprintf(os.Stderr, "Error: %s\n", err2.Error())
-				os.Exit(1)
-			}
-
 			os.Exit(0)
 
 		} else {

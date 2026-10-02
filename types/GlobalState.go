@@ -9,6 +9,8 @@ type GlobalState struct {
 	ActiveWorkspace   string
 	Workspaces        map[string]*Workspace
 	LastFocusedWindow uint64
+	CursorX           int
+	CursorY           int
 }
 
 func NewGlobalState() *GlobalState {
@@ -162,5 +164,22 @@ func (state *GlobalState) GetLastFocusedWindow() uint64 {
 	state.Mutex.Lock()
 	defer state.Mutex.Unlock()
 	return state.LastFocusedWindow
+
+}
+
+func (state *GlobalState) SetCursor(x int, y int) {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+	state.CursorX = x
+	state.CursorY = y
+
+}
+
+func (state *GlobalState) GetCursor() (int, int) {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+	return state.CursorX, state.CursorY
 
 }
