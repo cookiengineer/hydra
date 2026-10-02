@@ -3,18 +3,38 @@ package handlers
 import "encoding/json"
 import "fmt"
 import "io"
+import "net"
 import "net/http"
 import "strings"
 import "time"
 import "github.com/cookiengineer/hydra/types"
 
+func normalizeHost(host string) string {
+
+	host = strings.ToLower(strings.TrimSpace(host))
+
+	if idx := strings.Index(host, ":"); idx != -1 {
+		host = host[:idx]
+	}
+
+	return host
+
+}
+
 func OnConnect(config *types.Config, state *types.GlobalState, response http.ResponseWriter, request *http.Request) {
 
-	hostname     := strings.ToLower(strings.TrimSpace(request.Header.Get("Host")))
-	content_type := strings.ToLower(strings.TrimSpace(request.Header.Get("Content-Type")))
-	x_protocol   := strings.ToLower(strings.TrimSpace(request.Header.Get("X-Protocol")))
+	host_header        := normalizeHost(request.Header.Get("Host"))
+	controller_header  := normalizeHost(request.Header.Get("X-Hydra-Controller"))
+	content_type       := strings.ToLower(strings.TrimSpace(request.Header.Get("Content-Type")))
+	x_protocol         := strings.ToLower(strings.TrimSpace(request.Header.Get("X-Protocol")))
 
-	if hostname != config.Controller || content_type != "application/json" || x_protocol != "hydra" {
+	requester := controller_header
+
+	if requester == "" {
+		requester = host_header
+	}
+
+	if requester != config.Controller || !strings.HasPrefix(content_type, "application/json") || x_protocol != "hydra" {
 		response.Header().Set("Content-Type", "application/json")
 		response.WriteHeader(http.StatusPreconditionFailed)
 		response.Write([]byte("{\"error\": \"Precondition Failed: Not a Hydra Client\"}"))
@@ -41,7 +61,9 @@ func OnConnect(config *types.Config, state *types.GlobalState, response http.Res
 		return
 	}
 
-	tmp.IP = request.RemoteAddr
+	if remote_host, _, err := net.SplitHostPort(request.RemoteAddr); err == nil && remote_host != "" {
+		tmp.IP = remote_host
+	}
 
 	err2 := tmp.Parse()
 
@@ -93,9 +115,16 @@ func OnConnect(config *types.Config, state *types.GlobalState, response http.Res
 		Workspaces:      config.Workspaces,
 		ActiveWorkspace: state.GetActiveWorkspace(),
 	}
-	init_payload, _ := json.Marshal(init_event)
-	fmt.Fprintf(response, "%s\n", init_payload)
-	flusher.Flush()
+
+	envelope, err3 := types.NewEvent("init", init_event)
+
+	if err3 == nil {
+
+		init_payload, _ := json.Marshal(envelope)
+		fmt.Fprintf(response, "%s\n", init_payload)
+		flusher.Flush()
+
+	}
 
 	for {
 		select {
