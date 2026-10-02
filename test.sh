@@ -1,21 +1,41 @@
 #!/usr/bin/env bash
 
-# Arch Linux:
-#   sudo pacman -S podman
+# Hydra test runner. Delegates to the centralized Makefile.
 #
-# Debian / Ubuntu:
-#   sudo apt install podman
+#   bash test.sh unit;
+#   bash test.sh integration;
+#   bash test.sh e2e hydratwo;
+#   bash test.sh all;
 
 set -euo pipefail;
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)";
 
-IMAGE_TAG="hydra-xorg-test";
+MODE="${1:-all}";
 
-echo "==> Building test container (${IMAGE_TAG})...";
-podman build --pull -t "${IMAGE_TAG}" -f "${PROJECT_DIR}/Containerfile" "${PROJECT_DIR}";
+case "${MODE}" in
 
-echo "";
-echo "==> Running integration tests in isolated Xvfb container...";
-podman run --rm "${IMAGE_TAG}";
+    unit)
+        make -C "${PROJECT_DIR}" unit;
+        ;;
 
+    integration)
+        make -C "${PROJECT_DIR}" integration;
+        ;;
+
+    e2e)
+        make -C "${PROJECT_DIR}" e2e HOST="${2:-hydratwo}";
+        ;;
+
+    all)
+        make -C "${PROJECT_DIR}" unit;
+        echo "";
+        make -C "${PROJECT_DIR}" integration;
+        ;;
+
+    *)
+        echo "Usage: bash test.sh [unit|integration|e2e|all] [host]";
+        exit 1;
+        ;;
+
+esac
