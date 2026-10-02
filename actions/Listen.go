@@ -7,6 +7,7 @@ import "net/http"
 import "os"
 import "os/signal"
 import "syscall"
+import "time"
 import "github.com/cookiengineer/hydra/adapters/xorg"
 import "github.com/cookiengineer/hydra/handlers"
 import "github.com/cookiengineer/hydra/parsers"
@@ -86,6 +87,10 @@ func Listen(host string) error {
 
 		go func() {
 
+			ticker := time.NewTicker(100 * time.Millisecond)
+
+			defer ticker.Stop()
+
 			for {
 				select {
 				case event := <-bridge.MouseEvents:
@@ -93,6 +98,9 @@ func Listen(host string) error {
 
 				case event := <-bridge.KeyboardEvents:
 					handleKeyboardEvent(bridge, event, state, config)
+
+				case <-ticker.C:
+					reconcileButtons(bridge, state, config)
 
 				case <-ctx.Done():
 					return
@@ -104,6 +112,20 @@ func Listen(host string) error {
 		<-ctx.Done()
 
 		fmt.Println("Shutting down...")
+
+		active := state.GetActive()
+		cx, cy := state.GetCursor()
+
+		releaseTrackedInput(state, active, cx, cy)
+		state.ResetActive()
+
+		last_id := state.GetLastFocusedWindow()
+
+		if last_id != 0 {
+			xorg.FocusWindow(bridge, last_id)
+		}
+
+		xorg.ReleaseModifiers(bridge)
 
 		bridge.Destroy()
 

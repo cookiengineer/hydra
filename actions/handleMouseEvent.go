@@ -85,6 +85,8 @@ func handleMouseEvent(bridge *xorg.Bridge, event types.MouseEvent, state *types.
 
 		sendEnvelope(active, "mouse", event)
 
+		pinPointer(bridge, config, active)
+
 		return
 
 	}
@@ -92,6 +94,28 @@ func handleMouseEvent(bridge *xorg.Bridge, event types.MouseEvent, state *types.
 	event.X = uint(vx)
 	event.Y = uint(vy)
 
-	sendEnvelope(active, "mouse", event)
+	if event.Type == types.MouseButtonPress {
+
+		state.TrackButton(int(event.Button))
+		sendMouse(active, event)
+
+		return
+
+	}
+
+	if event.Type == types.MouseButtonRelease {
+
+		if !state.IsTrackedButton(int(event.Button)) {
+			return
+		}
+
+		state.UntrackButton(int(event.Button))
+		sendMouse(active, event)
+
+		return
+
+	}
+
+	sendMouse(active, event)
 
 }

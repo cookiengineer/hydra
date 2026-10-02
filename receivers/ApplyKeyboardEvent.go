@@ -19,6 +19,8 @@ func ApplyKeyboardEvent(bridge *xorg.Bridge, event *types.KeyboardEvent) {
 
 	}
 
+	trackKey(event.Keycode, event.Type == types.KeyPress)
+
 	xorg.SimulateKeyboardEvent(bridge, event)
 
 }

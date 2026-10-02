@@ -22,6 +22,8 @@ func OnDisconnect(config *types.Config, state *types.GlobalState, response http.
 
 	config.RemoveMachine(machine)
 	config.ComputeVirtualScreen()
+	state.ClearTrackedKeys()
+	state.ClearTrackedButtons()
 	state.ResetActive()
 
 	response.Header().Set("Content-Type", "application/json")

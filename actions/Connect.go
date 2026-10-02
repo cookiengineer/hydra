@@ -159,6 +159,7 @@ func receiveEvents(body io.Reader, host string, hostname string) error {
 	}
 
 	defer bridge.Destroy()
+	defer receivers.ReleaseAll(bridge)
 
 	var virtual_screen *types.VirtualScreen = nil
 

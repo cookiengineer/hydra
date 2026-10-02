@@ -39,6 +39,9 @@ func handleWindowManagerAction(bridge *xorg.Bridge, event *types.KeyboardEvent, 
 					sendEnvelope(active, "reset", types.ResetEvent{Type: "reset"})
 				}
 
+				release_cx, release_cy := state.GetCursor()
+				releaseTrackedInput(state, active, release_cx, release_cy)
+
 				state.ResetActive()
 
 				if config.Screen != nil {

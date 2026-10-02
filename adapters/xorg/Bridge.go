@@ -38,6 +38,7 @@ import "C"
 
 import "errors"
 import "os"
+import "sync/atomic"
 import "unsafe"
 import "github.com/cookiengineer/hydra/types"
 
@@ -48,7 +49,7 @@ type Bridge struct {
 	MouseEvents    chan types.MouseEvent
 	KeyboardEvents chan types.KeyboardEvent
 	Screen         *types.Screen
-	running        bool
+	running        atomic.Bool
 }
 
 func NewBridge(display string) (*Bridge, error) {
@@ -56,6 +57,8 @@ func NewBridge(display string) (*Bridge, error) {
 	if display != "" {
 		os.Setenv("DISPLAY", display)
 	}
+
+	C.XInitThreads()
 
 	x_display := C.XOpenDisplay(nil)
 
@@ -105,20 +108,30 @@ func NewBridge(display string) (*Bridge, error) {
 
 func (bridge *Bridge) Destroy() {
 
-	if bridge.display != nil {
+	if bridge.display == nil {
+		return
+	}
 
-		C.XCloseDisplay(bridge.display)
-		bridge.display = nil
+	if bridge.running.Load() {
+
+		// The Init goroutine is blocked in XNextEvent on this display.
+		// Closing it from here would crash; the process exits after
+		// shutdown, so leave the display open.
+
+		return
 
 	}
+
+	C.XCloseDisplay(bridge.display)
+	bridge.display = nil
 
 }
 
 func (bridge *Bridge) Init() {
 
-	if bridge.running == false {
+	if bridge.running.Load() == false {
 
-		bridge.running = true
+		bridge.running.Store(true)
 
 		go func() {
 

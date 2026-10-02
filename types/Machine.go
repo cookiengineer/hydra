@@ -71,7 +71,7 @@ func (machine *Machine) Parse() error {
 		return errors.New("Invalid Screen")
 	}
 
-	machine.Socket = make(chan []byte, 128)
+	machine.Socket = make(chan []byte, 1024)
 
 	return nil
 

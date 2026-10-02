@@ -25,6 +25,12 @@ func ApplyMouseEvent(bridge *xorg.Bridge, event *types.MouseEvent, virtualScreen
 	event.X = local_x
 	event.Y = local_y
 
+	if event.Type == types.MouseButtonPress {
+		trackButton(event.Button, true)
+	} else if event.Type == types.MouseButtonRelease {
+		trackButton(event.Button, false)
+	}
+
 	if bridge != nil {
 		xorg.SimulateMouseEvent(bridge, event)
 	}

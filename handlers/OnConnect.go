@@ -135,6 +135,8 @@ func OnConnect(config *types.Config, state *types.GlobalState, response http.Res
 			fmt.Printf("Client disconnected: %s (%s)\n", tmp.Hostname, tmp.IP)
 			config.RemoveMachine(tmp)
 			config.ComputeVirtualScreen()
+			state.ClearTrackedKeys()
+			state.ClearTrackedButtons()
 			state.ResetActive()
 			return
 		case <-time.After(30 * time.Second):

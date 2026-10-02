@@ -11,6 +11,8 @@ type GlobalState struct {
 	LastFocusedWindow uint64
 	CursorX           int
 	CursorY           int
+	PressedKeys       map[uint32]bool
+	PressedButtons    map[int]bool
 }
 
 func NewGlobalState() *GlobalState {
@@ -28,6 +30,8 @@ func NewGlobalState() *GlobalState {
 		Screen:          nil,
 		ActiveWorkspace: "FG",
 		Workspaces:      workspaces,
+		PressedKeys:     make(map[uint32]bool),
+		PressedButtons:  make(map[int]bool),
 	}
 
 }
@@ -181,5 +185,111 @@ func (state *GlobalState) GetCursor() (int, int) {
 	state.Mutex.Lock()
 	defer state.Mutex.Unlock()
 	return state.CursorX, state.CursorY
+
+}
+
+func (state *GlobalState) TrackKey(keysym uint32) {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+
+	if state.PressedKeys == nil {
+		state.PressedKeys = make(map[uint32]bool)
+	}
+
+	state.PressedKeys[keysym] = true
+
+}
+
+func (state *GlobalState) UntrackKey(keysym uint32) {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+
+	delete(state.PressedKeys, keysym)
+
+}
+
+func (state *GlobalState) IsTrackedKey(keysym uint32) bool {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+	return state.PressedKeys[keysym]
+
+}
+
+func (state *GlobalState) TrackedKeys() []uint32 {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+
+	keys := make([]uint32, 0, len(state.PressedKeys))
+
+	for keysym := range state.PressedKeys {
+		keys = append(keys, keysym)
+	}
+
+	return keys
+
+}
+
+func (state *GlobalState) ClearTrackedKeys() {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+	state.PressedKeys = make(map[uint32]bool)
+
+}
+
+func (state *GlobalState) TrackButton(button int) {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+
+	if state.PressedButtons == nil {
+		state.PressedButtons = make(map[int]bool)
+	}
+
+	state.PressedButtons[button] = true
+
+}
+
+func (state *GlobalState) UntrackButton(button int) {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+
+	delete(state.PressedButtons, button)
+
+}
+
+func (state *GlobalState) IsTrackedButton(button int) bool {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+	return state.PressedButtons[button]
+
+}
+
+func (state *GlobalState) TrackedButtons() []int {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+
+	buttons := make([]int, 0, len(state.PressedButtons))
+
+	for button := range state.PressedButtons {
+		buttons = append(buttons, button)
+	}
+
+	return buttons
+
+}
+
+func (state *GlobalState) ClearTrackedButtons() {
+
+	state.Mutex.Lock()
+	defer state.Mutex.Unlock()
+	state.PressedButtons = make(map[int]bool)
 
 }

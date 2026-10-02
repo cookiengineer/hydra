@@ -5,11 +5,15 @@ import "github.com/cookiengineer/hydra/types"
 
 func handleKeyboardEvent(bridge *xorg.Bridge, event types.KeyboardEvent, state *types.GlobalState, config *types.Config) {
 
-	if handleWindowManagerAction(bridge, &event, state, config) {
-		return
-	}
-
 	active := state.GetActive()
+
+	if event.Type == types.KeyPress {
+
+		if handleWindowManagerAction(bridge, &event, state, config) {
+			return
+		}
+
+	}
 
 	if active == nil {
 		return
@@ -25,6 +29,20 @@ func handleKeyboardEvent(bridge *xorg.Bridge, event types.KeyboardEvent, state *
 
 	}
 
+	if event.Type == types.KeyPress {
+
+		state.TrackKey(event.Keysym)
+
+	} else {
+
+		if !state.IsTrackedKey(event.Keysym) {
+			return
+		}
+
+		state.UntrackKey(event.Keysym)
+
+	}
+
 	modifiers, err := bridge.QueryModifiers()
 
 	if err == nil {
@@ -32,8 +50,9 @@ func handleKeyboardEvent(bridge *xorg.Bridge, event types.KeyboardEvent, state *
 	}
 
 	if active.Socket != nil {
-		sendEnvelope(active, "keyboard", event)
+		sendKeyboard(active, event)
 	} else {
+		state.ClearTrackedKeys()
 		state.ResetActive()
 	}
 

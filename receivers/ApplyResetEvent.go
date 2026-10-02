@@ -6,6 +6,7 @@ func ApplyResetEvent(bridge *xorg.Bridge) {
 
 	if bridge != nil {
 		xorg.UnfocusWindow(bridge)
+		xorg.ReleaseModifiers(bridge)
 	}
 
 }
