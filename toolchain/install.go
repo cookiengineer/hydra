@@ -388,7 +388,13 @@ func (target localTarget) Upload(local_path string, remote_path string) error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0755)
+	tmp := path + ".tmp"
+
+	if err := os.WriteFile(tmp, data, 0755); err != nil {
+		return err
+	}
+
+	return os.Rename(tmp, path)
 
 }
 
@@ -589,8 +595,8 @@ func uploadSSH(client *ssh.Client, local_path string, remote_path string) error 
 
 	session.Stdin = bytes.NewReader(data)
 
-	command := fmt.Sprintf("mkdir -p \"$(dirname %s)\" && cat > %s && chmod 0755 %s",
-		remote_path, remote_path, remote_path)
+	command := fmt.Sprintf("mkdir -p \"$(dirname %s)\" && cat > %s.tmp && chmod 0755 %s.tmp && mv -f %s.tmp %s",
+		remote_path, remote_path, remote_path, remote_path, remote_path)
 
 	return session.Run(command)
 
